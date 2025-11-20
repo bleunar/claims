@@ -1,0 +1,20 @@
+/* Custom styling for the tabs */
+.custom-tabs .nav-link {
+  color: #28a745; /* Green text for tabs */
+  border: none; /* Remove default borders */
+  font-size: 0.95rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-tabs .nav-link:hover {
+  color: #1c7c31; /* Darker green on hover */
+  background-color: #f5f5f5; /* Light gray hover state */
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.custom-tabs .nav-link.active {
+  color: white !important;
+  background-color: #28a745 !important; /* Solid green background for active tab */
+  font-weight: bold;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
