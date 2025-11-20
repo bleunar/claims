@@ -12,7 +12,7 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3306:3306"
+      - "6703:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/claims_schema.sql:/docker-entrypoint-initdb.d/init.sql
@@ -36,7 +36,7 @@ services:
       PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       UPLOAD_LIMIT: 100M
     ports:
-      - "6700:80"
+      - "6702:80"
     depends_on:
       mysql:
         condition: service_healthy
@@ -71,7 +71,7 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      - "3000:80"
+      - "6701:80"
     depends_on:
       - backend
     networks:
