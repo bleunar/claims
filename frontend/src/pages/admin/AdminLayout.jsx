@@ -118,7 +118,7 @@ function AdminLayout() {
           >
             <div style={{ position: "relative", width: "100px", margin: "0 auto" }}>
               <img
-                src={user?.profile ? `http://localhost:5000/uploads/${user.profile}` : "/img/default.png"}
+                src={user?.profile ? `/uploads/${user.profile}` : "/img/default.png"}
                 alt="Profile"
                 style={{
                   width: "100px",

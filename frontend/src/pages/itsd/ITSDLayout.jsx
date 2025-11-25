@@ -116,7 +116,7 @@ function ITSDLayout() {
                     >
                         <div style={{ position: "relative", width: "100px", margin: "0 auto" }}>
                             <img
-                                src={user?.profile ? `http://localhost:5000/uploads/${user.profile}` : "/img/default.png"}
+                                src={user?.profile ? `/uploads/${user.profile}` : "/img/default.png"}
                                 alt="Profile"
                                 style={{
                                     width: "100px",
@@ -134,29 +134,29 @@ function ITSDLayout() {
                         <p style={{ color: "#ccc", fontSize: "0.9rem", margin: "0 0 1rem 0" }}>{user?.role || "Fetching role..."}</p>
 
                         <div
-                          onClick={() => navigate("/itsd/edit")}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "0.5rem",
-                            padding: "0.8rem 1.2rem",
-                            borderRadius: "10px",
-                            backgroundColor: location.pathname === "/itsd/edit" ? "#FFCC00" : "#004d26",
-                            color: location.pathname === "/itsd/edit" ? "#003d1f" : "#ffffff",
-                            fontWeight: "600",
-                            fontSize: "0.95rem",
-                            cursor: "pointer",
-                            boxShadow: "0 6px 15px rgba(0,0,0,0.2)",
-                            transition: "all 0.2s ease",
-                          }}
-                          onMouseOver={e => e.currentTarget.style.backgroundColor = "rgba(255,204,0,0.15)"}
-                          onMouseOut={e =>
-                            e.currentTarget.style.backgroundColor = location.pathname === "/itsd/edit" ? "#FFCC00" : "#004d26"
-                          }
+                            onClick={() => navigate("/itsd/edit")}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "0.5rem",
+                                padding: "0.8rem 1.2rem",
+                                borderRadius: "10px",
+                                backgroundColor: location.pathname === "/itsd/edit" ? "#FFCC00" : "#004d26",
+                                color: location.pathname === "/itsd/edit" ? "#003d1f" : "#ffffff",
+                                fontWeight: "600",
+                                fontSize: "0.95rem",
+                                cursor: "pointer",
+                                boxShadow: "0 6px 15px rgba(0,0,0,0.2)",
+                                transition: "all 0.2s ease",
+                            }}
+                            onMouseOver={e => e.currentTarget.style.backgroundColor = "rgba(255,204,0,0.15)"}
+                            onMouseOut={e =>
+                                e.currentTarget.style.backgroundColor = location.pathname === "/itsd/edit" ? "#FFCC00" : "#004d26"
+                            }
                         >
-                          <FaUserEdit size={18} />
-                          Edit Profile
+                            <FaUserEdit size={18} />
+                            Edit Profile
                         </div>
 
                     </div>

@@ -46,7 +46,7 @@ export default function ITSDUsers() {
         setFormData(user);
         setPreview(
             user.profile
-                ? `http://localhost:5000/uploads/${user.profile}`
+                ? `/uploads/${user.profile}`
                 : "/img/default.png"
         );
         setShowEdit(true);
@@ -118,7 +118,7 @@ export default function ITSDUsers() {
             <Row className="g-3">
                 {users.map((user) => {
                     const imageSrc = user.profile
-                        ? `http://localhost:5000/uploads/${user.profile}`
+                        ? `/uploads/${user.profile}`
                         : "/img/default.png";
 
                     return (

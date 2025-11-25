@@ -51,39 +51,39 @@ function TechnicianLayout() {
 
   return (
     <div style={{ height: "100vh", fontFamily: "Cambria, Georgia, serif", backgroundColor: "#f6f8fa" }}>
-     <header
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "60px",
-        backgroundColor: "#004d26",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "0 1rem",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-        zIndex: 1000,
-      }}
-    >
-  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-    {isMobile && (
-      <FaBars
-        size={22}
-        style={{ cursor: "pointer", color: "#FFCC00" }}
-        onClick={toggleSidebar}
-      />
-    )}
-    {!isMobile && (
-      <img
-        src="/img/image.png"
-        alt="CLAIMS Logo"
-        style={{ height: "40px" }} // adjust as needed
-      />
-    )}
-  </div>
-</header>
+      <header
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "60px",
+          backgroundColor: "#004d26",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0 1rem",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+          zIndex: 1000,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {isMobile && (
+            <FaBars
+              size={22}
+              style={{ cursor: "pointer", color: "#FFCC00" }}
+              onClick={toggleSidebar}
+            />
+          )}
+          {!isMobile && (
+            <img
+              src="/img/image.png"
+              alt="CLAIMS Logo"
+              style={{ height: "40px" }} // adjust as needed
+            />
+          )}
+        </div>
+      </header>
       <aside
         style={{
           position: "fixed",
@@ -114,7 +114,7 @@ function TechnicianLayout() {
           >
             <div style={{ position: "relative", width: "100px", margin: "0 auto" }}>
               <img
-                src={user?.profile ? `http://localhost:5000/uploads/${user.profile}` : "/img/default.png"}
+                src={user?.profile ? `/uploads/${user.profile}` : "/img/default.png"}
                 alt="Profile"
                 style={{
                   width: "100px",
@@ -131,33 +131,33 @@ function TechnicianLayout() {
             </h5>
             <p style={{ color: "#ccc", fontSize: "0.9rem", margin: "0 0 1rem 0" }}>{user?.role || "Fetching role..."}</p>
 
-          <div
-          onClick={() => navigate("/technician/TechnicianEdit")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.5rem",
-            padding: "0.8rem 1.2rem",
-            borderRadius: "10px",
-            backgroundColor: location.pathname === "/technician/TechnicianEdit" ? "#FFCC00" : "#004d26", 
-            color: location.pathname === "/technician/TechnicianEdit" ? "#003d1f" : "#ffffff", 
-            fontWeight: "600",
-            fontSize: "0.95rem",
-            cursor: "pointer",
-            boxShadow: "0 6px 15px rgba(0,0,0,0.2)",
-            transition: "all 0.2s ease",
-          }}
-          onMouseOver={e => e.currentTarget.style.backgroundColor = "rgba(255,204,0,0.15)"} 
-          onMouseOut={e => 
-            e.currentTarget.style.backgroundColor = location.pathname === "/technician/TechnicianEdit" ? "#FFCC00" : "#004d26"
-          }
-        >
-          <FaUserEdit size={18} />
-          Edit Profile
-        </div>
+            <div
+              onClick={() => navigate("/technician/TechnicianEdit")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                padding: "0.8rem 1.2rem",
+                borderRadius: "10px",
+                backgroundColor: location.pathname === "/technician/TechnicianEdit" ? "#FFCC00" : "#004d26",
+                color: location.pathname === "/technician/TechnicianEdit" ? "#003d1f" : "#ffffff",
+                fontWeight: "600",
+                fontSize: "0.95rem",
+                cursor: "pointer",
+                boxShadow: "0 6px 15px rgba(0,0,0,0.2)",
+                transition: "all 0.2s ease",
+              }}
+              onMouseOver={e => e.currentTarget.style.backgroundColor = "rgba(255,204,0,0.15)"}
+              onMouseOut={e =>
+                e.currentTarget.style.backgroundColor = location.pathname === "/technician/TechnicianEdit" ? "#FFCC00" : "#004d26"
+              }
+            >
+              <FaUserEdit size={18} />
+              Edit Profile
+            </div>
 
-        </div>
+          </div>
           {/* Sidebar Navigation */}
           <nav style={{ marginTop: "1rem" }}>
             <ul style={{ listStyle: "none", padding: "0 1rem" }}>
