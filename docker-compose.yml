@@ -1,48 +1,6 @@
 version: '3.8'
 
 services:
-  # MySQL Database
-  mysql:
-    image: mysql:8.0
-    container_name: claims-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DB}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    ports:
-      - "6703:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database/claims_schema.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - claims-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # phpMyAdmin for database management
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    container_name: claims-phpmyadmin
-    restart: unless-stopped
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      UPLOAD_LIMIT: 100M
-    ports:
-      - "6702:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    networks:
-      - claims-network
-
   backend:
     build:
       context: ./backend
@@ -50,16 +8,11 @@ services:
     container_name: claims-backend
     restart: unless-stopped
     env_file: .env
-    environment:
-      MYSQL_HOST: mysql
     ports:
       - "5000:5000"
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/logs:/app/logs
-    depends_on:
-      mysql:
-        condition: service_healthy
     networks:
       - claims-network
 
@@ -76,10 +29,6 @@ services:
       - backend
     networks:
       - claims-network
-
-volumes:
-  mysql_data:
-    driver: local
 
 networks:
   claims-network:
