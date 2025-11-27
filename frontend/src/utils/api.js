@@ -6,7 +6,9 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // Get API URL from environment variable
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL;
+
+console.log(API_URL);
 
 // Create axios instance with default configuration
 const api = axios.create({
