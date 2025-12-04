@@ -1,35 +1,54 @@
-version: '3.8'
+name: claims-stack
 
 services:
-  backend:
+  claims-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: claims-backend
     restart: unless-stopped
     env_file: .env
-    ports:
-      - "5000:5000"
     volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/logs:/app/logs
+      - user_uploads:/app/uploads
+      - logs:/app/logs
+    secrets:
+      - mysql_password
+      - secret_key
+      - jwt_secret_key
+      - mail_password
+      - admin_init_password
     networks:
       - claims-network
 
-  frontend:
+  claims-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: claims-frontend
     restart: unless-stopped
     env_file: .env
-    ports:
-      - "6701:80"
     depends_on:
-      - backend
+      - claims-backend
     networks:
       - claims-network
 
+volumes:
+  user_uploads:
+  logs:
+
+secrets:
+  mysql_password:
+    file: ./secret/mysql_password.txt
+  secret_key:
+    file: ./secret/secret_key.txt
+  jwt_secret_key:
+    file: ./secret/jwt_secret_key.txt
+  mail_password:
+    file: ./secret/mail_password.txt
+  admin_init_password:
+    file: ./secret/admin_init_password.txt
+
 networks:
   claims-network:
+    name: claims-network
     driver: bridge

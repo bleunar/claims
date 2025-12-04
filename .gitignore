@@ -3,6 +3,7 @@
 
 # ===== Environment Variables =====
 .env
+.env.development
 .env.local
 .env.*.local
 
@@ -147,6 +148,7 @@ jspm_packages/
 .env.test
 .env.production
 .env.local
+.env.development
 .env.development.local
 .env.test.local
 .env.production.local
@@ -306,6 +308,11 @@ config/secrets.json
 
 # AWS
 .aws/
+
+# Secrets directory (hehe)
+hehe/*
+!hehe/_*
+
 
 # =============================================================================
 # Project Specific
