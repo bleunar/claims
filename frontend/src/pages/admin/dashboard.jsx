@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card } from "react-bootstrap";
-import { 
-  FaLaptop, FaUsers, FaUserCheck, FaUserTimes, FaExclamationTriangle, 
-  FaQuestionCircle, FaFileAlt, FaCogs 
+import {
+  FaLaptop, FaUsers, FaUserCheck, FaUserTimes, FaExclamationTriangle,
+  FaQuestionCircle, FaFileAlt, FaCogs
 } from "react-icons/fa";
-import { 
-  PieChart, Pie, Cell, Tooltip, Legend, 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, 
-  AreaChart, Area 
+import {
+  PieChart, Pie, Cell, Tooltip, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
+  AreaChart, Area
 } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -24,13 +24,15 @@ const COLORS = {
 };
 
 const KPI = ({ title, value, icon, color, bg }) => (
-  <Card className="kpi-card shadow-sm" style={{ backgroundColor: bg }}>
-    <Card.Body>
-      <div className="kpi-icon" style={{ color }}>{icon}</div>
-      <h6 className="kpi-title">{title}</h6>
-      <div className="kpi-value">{value ?? 0}</div>
-    </Card.Body>
-  </Card>
+  <div className="col p-1">
+    <Card className="kpi-card shadow-sm h-100" style={{ backgroundColor: bg }}>
+      <Card.Body>
+        <div className="kpi-icon" style={{ color }}>{icon}</div>
+        <h6 className="kpi-title">{title}</h6>
+        <div className="kpi-value">{value ?? 0}</div>
+      </Card.Body>
+    </Card>
+  </div>
 );
 
 const ChartCard = ({ title, children }) => (
@@ -63,7 +65,7 @@ export default function AdminDashboard() {
         setLoading(true);
         const response = await api.get('/get_data');
         const data = response.data;
-        
+
         const s = data.stats || {};
         setStats(s);
 
@@ -72,19 +74,19 @@ export default function AdminDashboard() {
         setLabsComputers(
           Array.isArray(data.labEquipments)
             ? data.labEquipments.map(lab => ({
-                lab: `Computer Lab ${lab.name ?? "Unnamed"}`,
-                computers: lab.computers ?? 0
-              }))
+              lab: `Computer Lab ${lab.name ?? "Unnamed"}`,
+              computers: lab.computers ?? 0
+            }))
             : []
         );
 
         setDamageMissing(
           Array.isArray(data.damageMissing)
             ? data.damageMissing.map(lab => ({
-                lab: `Computer Lab ${lab.name ?? "Unnamed"}`,
-                damaged: lab.damaged ?? 0,
-                missing: lab.missing ?? 0
-              }))
+              lab: `Computer Lab ${lab.name ?? "Unnamed"}`,
+              damaged: lab.damaged ?? 0,
+              missing: lab.missing ?? 0
+            }))
             : []
         );
       } catch (err) {
@@ -125,13 +127,13 @@ export default function AdminDashboard() {
   return (
     <Container fluid className="my-4">
       {/* KPIs */}
-      <div className="kpi-row mb-4">
+      <div className="row row-cols-md-2 row-cols-lg-4 mb-4">
         {summaryItems.map((item, idx) => (
           <KPI key={idx} {...item} />
         ))}
       </div>
 
-      <Row className="g-4">
+      <Row className="g-2">
         {/* Computer Status Pie */}
         <Col xs={12} md={6}>
           <ChartCard title="Computer Status">
@@ -169,10 +171,10 @@ export default function AdminDashboard() {
                 <YAxis allowDecimals={false} domain={[0, 'auto']} />
                 <Tooltip />
                 <Legend verticalAlign="top" align="center" />
-                <Bar dataKey="operational" fill={COLORS.operational} barSize={20} />
-                <Bar dataKey="notOperational" fill={COLORS.notOperational} barSize={20} />
-                <Bar dataKey="missing" fill={COLORS.missing} barSize={20} />
-                <Bar dataKey="damaged" fill={COLORS.damaged} barSize={20} />
+                <Bar dataKey="Operational" fill={COLORS.operational} barSize={20} />
+                <Bar dataKey="Not Operational" fill={COLORS.notOperational} barSize={20} />
+                <Bar dataKey="Missing" fill={COLORS.missing} barSize={20} />
+                <Bar dataKey="Damaged" fill={COLORS.damaged} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -188,7 +190,7 @@ export default function AdminDashboard() {
                 <YAxis allowDecimals={false} tick={{ fill: "#333", fontSize: 14 }} />
                 <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "#f9f9f9", border: "1px solid #ccc", borderRadius: "8px", fontSize: 14 }} />
                 <Legend verticalAlign="top" align="center" wrapperStyle={{ fontSize: 14, marginBottom: 10 }} />
-                <Bar dataKey="computers" fill={COLORS.operational} barSize={40} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="Computers" fill={COLORS.operational} barSize={40} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -201,21 +203,21 @@ export default function AdminDashboard() {
               <AreaChart data={damageMissing} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
                 <defs>
                   <linearGradient id="damagedGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={COLORS.damaged} stopOpacity={0.9}/>
-                    <stop offset="100%" stopColor={COLORS.damaged} stopOpacity={0.2}/>
+                    <stop offset="0%" stopColor={COLORS.damaged} stopOpacity={0.9} />
+                    <stop offset="100%" stopColor={COLORS.damaged} stopOpacity={0.2} />
                   </linearGradient>
                   <linearGradient id="missingGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={COLORS.missing} stopOpacity={0.9}/>
-                    <stop offset="100%" stopColor={COLORS.missing} stopOpacity={0.2}/>
+                    <stop offset="0%" stopColor={COLORS.missing} stopOpacity={0.9} />
+                    <stop offset="100%" stopColor={COLORS.missing} stopOpacity={0.2} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                 <XAxis dataKey="lab" interval={0} angle={-30} textAnchor="end" height={60} />
-                <YAxis allowDecimals={false}/>
-                <Tooltip contentStyle={{ backgroundColor: "#fff", borderRadius: "6px" }}/>
-                <Legend verticalAlign="top" align="center"/>
-                <Area type="monotone" dataKey="damaged" stroke={COLORS.damaged} fill="url(#damagedGradient)" strokeWidth={2} activeDot={{ r: 6 }}/>
-                <Area type="monotone" dataKey="missing" stroke={COLORS.missing} fill="url(#missingGradient)" strokeWidth={2} activeDot={{ r: 6 }}/>
+                <YAxis allowDecimals={false} />
+                <Tooltip contentStyle={{ backgroundColor: "#fff", borderRadius: "6px" }} />
+                <Legend verticalAlign="top" align="center" />
+                <Area type="monotone" dataKey="Damaged" stroke={COLORS.damaged} fill="url(#damagedGradient)" strokeWidth={2} activeDot={{ r: 6 }} />
+                <Area type="monotone" dataKey="Missing" stroke={COLORS.missing} fill="url(#missingGradient)" strokeWidth={2} activeDot={{ r: 6 }} />
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>

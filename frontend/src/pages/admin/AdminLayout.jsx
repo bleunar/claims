@@ -47,7 +47,6 @@ function AdminLayout() {
   const sidebarLinks = [
     { icon: <FaHome />, label: "Dashboard", path: "/admin" },
     { icon: <FaNetworkWired />, label: "Labs & Computers", path: "/admin/labs" },
-    { icon: <FaNetworkWired />, label: "Labs & Computers", path: "/admin/labs" },
     { icon: <FaClipboardList />, label: "Reports", path: "/admin/reports" },
     { icon: <FaUserEdit />, label: "Users", path: "/admin/users" },
   ];

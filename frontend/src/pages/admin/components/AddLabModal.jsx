@@ -15,7 +15,7 @@ export default function AddLabModal({ addLab, onClose }) {
       const response = await api.post('/add_laboratory', {
         data: { lab_name: name, location }
       });
-      
+
       if (response.data) {
         addLab(response.data);
         toast.success('Laboratory added successfully');
@@ -43,9 +43,9 @@ export default function AddLabModal({ addLab, onClose }) {
           <div className="form-group">
             <label>Laboratory Number</label>
             <input
-              type="number"
+              type="text"
               className="form-control"
-              placeholder="Enter Laboratory Number"
+              placeholder="CL 0"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -57,7 +57,7 @@ export default function AddLabModal({ addLab, onClose }) {
             <input
               type="text"
               className="form-control"
-              placeholder="Enter Location"
+              placeholder="Computer Laboratory 0"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               required
