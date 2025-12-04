@@ -3,14 +3,21 @@
 # Global Variables
 BACKUP_DIR="./backups"
 SECRETS_DIR="./secrets"
+LOGS_DIR="./logs"
 ENV_FILE=".env"
 ENV_TEMPLATE=".env.example"
+ERROR_LOG="$LOGS_DIR/error.log"
 
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
+
+# Ensure directories exist
+mkdir -p "$BACKUP_DIR"
+mkdir -p "$SECRETS_DIR"
+mkdir -p "$LOGS_DIR"
 
 # Check for sudo
 if [ "$EUID" -ne 0 ]; then
@@ -23,29 +30,20 @@ fi
 check_dependencies() {
     if ! command -v whiptail &> /dev/null; then
         echo -e "${YELLOW}whiptail is not installed. Installing...${NC}"
-        if [ -x "$(command -v apt-get)" ]; then
-            apt-get update && apt-get install -y whiptail
-        elif [ -x "$(command -v yum)" ]; then
-            yum install -y newt
-        elif [ -x "$(command -v dnf)" ]; then
-            dnf install -y newt
-        elif [ -x "$(command -v apk)" ]; then
-            apk add newt
-        else
-            echo -e "${RED}Could not detect package manager. Please install whiptail manually.${NC}"
-            exit 1
-        fi
+        # User specified debian based distro
+        apt-get update && apt-get install -y whiptail
     fi
 }
 
 check_dependencies
 
+# Trap Ctrl+C to prevent exiting the script entirely
+trap '' SIGINT
+
 # Main Menu
 while true; do
     # Get Running Containers
-    # Using docker compose ps to get status. 
-    # We might need to handle if docker compose is not running or no containers.
-    CONTAINERS=$(docker compose ps --format "table {{.Service}}\t{{.State}}\t{{.Status}}" 2>/dev/null | tail -n +2)
+    CONTAINERS=$(docker compose ps --format "table {{.Service}}\t{{.State}}\t{{.Status}}" 2>>"$ERROR_LOG" | tail -n +2)
     if [ -z "$CONTAINERS" ]; then
         CONTAINERS="No containers running or docker compose stack not active."
     fi
@@ -54,8 +52,6 @@ while true; do
     
     MENU_TEXT="Docker Management Script\nCurrent Time: $CURRENT_TIME\n\nContainers:\n$CONTAINERS"
 
-    # Whiptail menu
-    # The height/width might need adjustment based on content
     CHOICE=$(whiptail --title "Main Menu" --menu "$MENU_TEXT" 25 100 15 \
         "1" "Runtime" \
         "2" "Logs" \
@@ -83,7 +79,7 @@ while true; do
                 case $RUNTIME_CHOICE in
                     1)
                         # Status
-                        STATUS=$(docker compose ps --format "table {{.Service}}\t{{.State}}\t{{.Status}}")
+                        STATUS=$(docker compose ps --format "table {{.Service}}\t{{.State}}\t{{.Status}}" 2>>"$ERROR_LOG")
                         whiptail --title "Container Status" --msgbox "$STATUS" 20 100
                         ;;
                     2|3|4)
@@ -95,14 +91,12 @@ while true; do
                             4) ACTION="restart";;
                         esac
 
-                        # Get services
-                        SERVICES=$(docker compose config --services)
+                        SERVICES=$(docker compose config --services 2>>"$ERROR_LOG")
                         if [ -z "$SERVICES" ]; then
                             whiptail --msgbox "No services found in docker-compose.yml" 10 60
                             continue
                         fi
 
-                        # Build checklist
                         CHECKLIST_ARGS=()
                         while read -r service; do
                             CHECKLIST_ARGS+=("$service" "" "OFF")
@@ -111,15 +105,13 @@ while true; do
                         SELECTED_SERVICES=$(whiptail --title "$ACTION Services" --checklist "Select services to $ACTION" 20 60 10 "${CHECKLIST_ARGS[@]}" 3>&1 1>&2 2>&3)
                         
                         if [ $? -eq 0 ]; then
-                            # Remove quotes from selection
                             SELECTED_SERVICES=$(echo "$SELECTED_SERVICES" | tr -d '"')
                             
                             if [ -z "$SELECTED_SERVICES" ]; then
                                 whiptail --msgbox "No services selected." 10 60
                             else
-                                # Execute command
                                 whiptail --infobox "Performing $ACTION on: $SELECTED_SERVICES..." 10 60
-                                docker compose $ACTION $SELECTED_SERVICES
+                                docker compose $ACTION $SELECTED_SERVICES 2>>"$ERROR_LOG"
                                 whiptail --msgbox "$ACTION completed." 10 60
                             fi
                         fi
@@ -132,8 +124,7 @@ while true; do
             ;;
         2)
             while true; do
-                # Get services for logs
-                SERVICES=$(docker compose config --services)
+                SERVICES=$(docker compose config --services 2>>"$ERROR_LOG")
                 if [ -z "$SERVICES" ]; then
                     whiptail --msgbox "No services found." 10 60
                     break
@@ -148,7 +139,6 @@ while true; do
                 
                 if [ $? -ne 0 ]; then break; fi
                 
-                # Remove quotes
                 SELECTED_SERVICE=$(echo "$SELECTED_SERVICE" | tr -d '"')
 
                 if [ -z "$SELECTED_SERVICE" ]; then
@@ -167,20 +157,21 @@ while true; do
                     1)
                         clear
                         echo "Showing live logs for $SELECTED_SERVICE. Press Ctrl+C to exit."
+                        # Temporarily enable SIGINT for docker compose to handle it
+                        trap - SIGINT
                         docker compose logs -f "$SELECTED_SERVICE"
+                        # Re-enable ignore SIGINT
+                        trap '' SIGINT
                         read -p "Press Enter to return to menu..."
                         ;;
                     2)
-                        # We use a temp file to view logs in whiptail or just clear and use less
-                        # Using less is better for navigation
                         clear
-                        docker compose logs --tail 100 "$SELECTED_SERVICE" | less
+                        docker compose logs --tail 100 "$SELECTED_SERVICE" 2>>"$ERROR_LOG" | less
                         ;;
                     3)
-                        if [ ! -d "$BACKUP_DIR" ]; then mkdir -p "$BACKUP_DIR"; fi
                         TIMESTAMP=$(date "+%Y%m%d_%H%M%S")
-                        LOG_FILE="$BACKUP_DIR/${SELECTED_SERVICE}_${TIMESTAMP}.log"
-                        docker compose logs "$SELECTED_SERVICE" > "$LOG_FILE"
+                        LOG_FILE="$LOGS_DIR/${SELECTED_SERVICE}_${TIMESTAMP}.log"
+                        docker compose logs "$SELECTED_SERVICE" > "$LOG_FILE" 2>>"$ERROR_LOG"
                         whiptail --msgbox "Logs saved to $LOG_FILE" 10 60
                         ;;
                 esac
@@ -206,15 +197,28 @@ while true; do
                         
                         if [ $? -ne 0 ]; then continue; fi
 
-                        if [ ! -d "$BACKUP_DIR" ]; then mkdir -p "$BACKUP_DIR"; fi
+                        # Prompt to stop services
+                        whiptail --yesno "Services must be stopped to ensure data consistency. Stop all services now?" 10 60
+                        if [ $? -eq 0 ]; then
+                            whiptail --infobox "Stopping services..." 10 60
+                            docker compose stop 2>>"$ERROR_LOG"
+                        else
+                            whiptail --msgbox "Backup cancelled. Services must be stopped." 10 60
+                            continue
+                        fi
+
                         TIMESTAMP=$(date "+%Y%m%d_%H%M%S")
+                        PROJECT_NAME=$(docker compose config --format json 2>>"$ERROR_LOG" | grep -o '"name": "[^"]*"' | cut -d'"' -f4)
+                        if [ -z "$PROJECT_NAME" ]; then PROJECT_NAME=${PWD##*/}; fi
 
                         case $BACKUP_TYPE in
                             1)
                                 # One Volume
-                                VOLUMES=$(docker compose config --volumes)
+                                VOLUMES=$(docker compose config --volumes 2>>"$ERROR_LOG")
                                 if [ -z "$VOLUMES" ]; then
                                     whiptail --msgbox "No volumes found." 10 60
+                                    # Restart services if we stopped them?
+                                    docker compose start 2>>"$ERROR_LOG"
                                     continue
                                 fi
 
@@ -228,56 +232,38 @@ while true; do
                                 if [ $? -eq 0 ]; then
                                     SELECTED_VOL=$(echo "$SELECTED_VOL" | tr -d '"')
                                     if [ -n "$SELECTED_VOL" ]; then
-                                        # Get actual volume name (prepend project name if needed, but compose config returns logical name)
-                                        # We need the actual volume name on host.
-                                        # docker compose config --volumes returns the key in compose file.
-                                        # The actual volume name is usually project_volume.
-                                        # Let's inspect to get the name.
-                                        PROJECT_NAME=$(docker compose config --format json | grep -o '"name": "[^"]*"' | cut -d'"' -f4)
-                                        if [ -z "$PROJECT_NAME" ]; then PROJECT_NAME=${PWD##*/}; fi
-                                        # Fallback to simple concatenation if inspect fails or complex logic needed
-                                        # Better: use docker volume ls --filter label=com.docker.compose.project=$PROJECT_NAME
-                                        
-                                        # Actually, let's just use the volume name from compose and let docker run handle it if mapped?
-                                        # No, we need to mount the volume.
-                                        # If we use `docker run -v project_volume:/data ...` it works.
-                                        # But we only have the logical name `db_data`.
-                                        # The actual volume is `nat_db_data` (usually).
-                                        
-                                        # Let's try to find the actual volume name.
                                         ACTUAL_VOL_NAME=$(docker volume ls --format "{{.Name}}" | grep "${PROJECT_NAME}_${SELECTED_VOL}$" | head -n 1)
-                                        if [ -z "$ACTUAL_VOL_NAME" ]; then
-                                            # Try exact match if external
-                                            ACTUAL_VOL_NAME=$SELECTED_VOL
-                                        fi
+                                        if [ -z "$ACTUAL_VOL_NAME" ]; then ACTUAL_VOL_NAME=$SELECTED_VOL; fi
 
-                                        whiptail --infobox "Backing up $ACTUAL_VOL_NAME..." 10 60
-                                        docker run --rm -v "$ACTUAL_VOL_NAME":/data -v "$PWD/$BACKUP_DIR":/backup alpine tar cvf "/backup/${SELECTED_VOL}_${TIMESTAMP}.tar" -C /data .
-                                        whiptail --msgbox "Backup created: ${SELECTED_VOL}_${TIMESTAMP}.tar" 10 60
+                                        BACKUP_FILE="${PROJECT_NAME}_${SELECTED_VOL}_${TIMESTAMP}.tar"
+                                        
+                                        whiptail --infobox "Backing up $ACTUAL_VOL_NAME to $BACKUP_FILE..." 10 60
+                                        docker run --rm -v "$ACTUAL_VOL_NAME":/data -v "$PWD/$BACKUP_DIR":/backup alpine tar cvf "/backup/$BACKUP_FILE" -C /data . 2>>"$ERROR_LOG"
+                                        whiptail --msgbox "Backup created: $BACKUP_FILE" 10 60
                                     fi
                                 fi
                                 ;;
                             2)
                                 # All Volumes
-                                VOLUMES=$(docker compose config --volumes)
-                                if [ -z "$VOLUMES" ]; then
-                                    whiptail --msgbox "No volumes found." 10 60
-                                    continue
-                                fi
-                                
-                                PROJECT_NAME=$(docker compose config --format json | grep -o '"name": "[^"]*"' | cut -d'"' -f4)
-                                if [ -z "$PROJECT_NAME" ]; then PROJECT_NAME=${PWD##*/}; fi
-
+                                VOLUMES=$(docker compose config --volumes 2>>"$ERROR_LOG")
                                 whiptail --infobox "Backing up all volumes..." 10 60
                                 while read -r vol; do
                                     ACTUAL_VOL_NAME=$(docker volume ls --format "{{.Name}}" | grep "${PROJECT_NAME}_${vol}$" | head -n 1)
                                     if [ -z "$ACTUAL_VOL_NAME" ]; then ACTUAL_VOL_NAME=$vol; fi
                                     
-                                    docker run --rm -v "$ACTUAL_VOL_NAME":/data -v "$PWD/$BACKUP_DIR":/backup alpine tar cvf "/backup/${vol}_${TIMESTAMP}.tar" -C /data .
+                                    BACKUP_FILE="${PROJECT_NAME}_${vol}_${TIMESTAMP}.tar"
+                                    docker run --rm -v "$ACTUAL_VOL_NAME":/data -v "$PWD/$BACKUP_DIR":/backup alpine tar cvf "/backup/$BACKUP_FILE" -C /data . 2>>"$ERROR_LOG"
                                 done <<< "$VOLUMES"
                                 whiptail --msgbox "All volumes backed up." 10 60
                                 ;;
                         esac
+                        
+                        # Restart services
+                        whiptail --yesno "Backup complete. Restart services?" 10 60
+                        if [ $? -eq 0 ]; then
+                            whiptail --infobox "Starting services..." 10 60
+                            docker compose start 2>>"$ERROR_LOG"
+                        fi
                         ;;
                     2)
                         # Recover
@@ -290,7 +276,6 @@ while true; do
                         
                         case $RECOVER_TYPE in
                             1)
-                                # List backups
                                 BACKUPS=$(ls "$BACKUP_DIR"/*.tar 2>/dev/null)
                                 if [ -z "$BACKUPS" ]; then
                                     whiptail --msgbox "No backups found." 10 60
@@ -307,8 +292,7 @@ while true; do
                                 if [ $? -eq 0 ]; then
                                     SELECTED_BACKUP=$(echo "$SELECTED_BACKUP" | tr -d '"')
                                     if [ -n "$SELECTED_BACKUP" ]; then
-                                        # Ask for target volume
-                                        VOLUMES=$(docker compose config --volumes)
+                                        VOLUMES=$(docker compose config --volumes 2>>"$ERROR_LOG")
                                         RADIOLIST_ARGS=()
                                         while read -r vol; do
                                             RADIOLIST_ARGS+=("$vol" "" "OFF")
@@ -319,29 +303,41 @@ while true; do
                                         if [ $? -eq 0 ]; then
                                             TARGET_VOL=$(echo "$TARGET_VOL" | tr -d '"')
                                             if [ -n "$TARGET_VOL" ]; then
-                                                PROJECT_NAME=$(docker compose config --format json | grep -o '"name": "[^"]*"' | cut -d'"' -f4)
+                                                # Stop services before recover
+                                                whiptail --yesno "Services must be stopped to recover data. Stop all services now?" 10 60
+                                                if [ $? -eq 0 ]; then
+                                                    whiptail --infobox "Stopping services..." 10 60
+                                                    docker compose stop 2>>"$ERROR_LOG"
+                                                else
+                                                    whiptail --msgbox "Recovery cancelled." 10 60
+                                                    continue
+                                                fi
+
+                                                PROJECT_NAME=$(docker compose config --format json 2>>"$ERROR_LOG" | grep -o '"name": "[^"]*"' | cut -d'"' -f4)
                                                 if [ -z "$PROJECT_NAME" ]; then PROJECT_NAME=${PWD##*/}; fi
                                                 ACTUAL_VOL_NAME=$(docker volume ls --format "{{.Name}}" | grep "${PROJECT_NAME}_${TARGET_VOL}$" | head -n 1)
                                                 if [ -z "$ACTUAL_VOL_NAME" ]; then ACTUAL_VOL_NAME=$TARGET_VOL; fi
 
                                                 whiptail --infobox "Restoring $SELECTED_BACKUP to $ACTUAL_VOL_NAME..." 10 60
-                                                # Create volume if not exists? No, assume it exists or let docker create it.
-                                                # But we should probably clear it first?
-                                                # For safety, let's just untar over it.
-                                                docker run --rm -v "$ACTUAL_VOL_NAME":/data -v "$PWD/$BACKUP_DIR":/backup alpine sh -c "tar xvf /backup/$SELECTED_BACKUP -C /data"
+                                                docker run --rm -v "$ACTUAL_VOL_NAME":/data -v "$PWD/$BACKUP_DIR":/backup alpine sh -c "tar xvf /backup/$SELECTED_BACKUP -C /data" 2>>"$ERROR_LOG"
                                                 whiptail --msgbox "Recovery completed." 10 60
+                                                
+                                                whiptail --yesno "Recovery complete. Restart services?" 10 60
+                                                if [ $? -eq 0 ]; then
+                                                    whiptail --infobox "Starting services..." 10 60
+                                                    docker compose start 2>>"$ERROR_LOG"
+                                                fi
                                             fi
                                         fi
                                     fi
                                 fi
                                 ;;
                             2)
-                                whiptail --msgbox "Recover All Volumes - Not implemented yet (requires strict naming convention)" 10 60
+                                whiptail --msgbox "Recover All Volumes - Not implemented yet" 10 60
                                 ;;
                         esac
                         ;;
                     3)
-                        # Recent Backups
                         if [ -d "$BACKUP_DIR" ]; then
                             BACKUPS=$(ls -lh "$BACKUP_DIR" | tail -n +2)
                             whiptail --title "Recent Backups" --msgbox "$BACKUPS" 20 80
@@ -382,7 +378,12 @@ while true; do
                                 NEW_NAME="${BASENAME#_}"
                                 NEW_PATH="$SECRETS_DIR/$NEW_NAME"
                                 
-                                # Prompt for value
+                                # Check if target file already exists
+                                if [ -f "$NEW_PATH" ]; then
+                                    whiptail --msgbox "Warning: $NEW_NAME already exists. Skipping initialization for this file to prevent overwrite." 10 60
+                                    continue
+                                fi
+                                
                                 VALUE=$(whiptail --title "Setup Secret: $NEW_NAME" --inputbox "Enter value for $NEW_NAME" 10 60 3>&1 1>&2 2>&3)
                                 
                                 if [ $? -eq 0 ]; then
@@ -394,7 +395,6 @@ while true; do
                                 fi
                             done
                         else
-                            # Edit existing secrets
                             SECRETS=$(find "$SECRETS_DIR" -maxdepth 1 -type f)
                             if [ -z "$SECRETS" ]; then
                                 whiptail --msgbox "No secrets found." 10 60
@@ -431,22 +431,18 @@ while true; do
                             fi
                         fi
 
-                        # Loop through variables
-                        # This is a simple parser, might not handle complex env files perfectly
-                        # We create a temp file to store updates
                         TEMP_ENV=$(mktemp)
                         
                         while IFS= read -r line || [ -n "$line" ]; do
-                            # Skip comments and empty lines
                             if [[ "$line" =~ ^#.* ]] || [[ -z "$line" ]]; then
                                 echo "$line" >> "$TEMP_ENV"
                                 continue
                             fi
 
-                            # Parse KEY=VALUE
-                            if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
-                                KEY="${BASH_REMATCH[1]}"
-                                VALUE="${BASH_REMATCH[2]}"
+                            # Parse KEY=VALUE using first = delimiter
+                            if [[ "$line" == *"="* ]]; then
+                                KEY="${line%%=*}"
+                                VALUE="${line#*=}"
                                 
                                 NEW_VALUE=$(whiptail --title "Edit .env" --inputbox "Enter value for $KEY" 10 60 "$VALUE" 3>&1 1>&2 2>&3)
                                 
