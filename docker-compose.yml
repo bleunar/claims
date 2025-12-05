@@ -38,15 +38,15 @@ volumes:
 
 secrets:
   mysql_password:
-    file: ./secret/mysql_password.txt
+    file: ./secrets/mysql_password.txt
   secret_key:
-    file: ./secret/secret_key.txt
+    file: ./secrets/secret_key.txt
   jwt_secret_key:
-    file: ./secret/jwt_secret_key.txt
+    file: ./secrets/jwt_secret_key.txt
   mail_password:
-    file: ./secret/mail_password.txt
+    file: ./secrets/mail_password.txt
   admin_init_password:
-    file: ./secret/admin_init_password.txt
+    file: ./secrets/admin_init_password.txt
 
 networks:
   claims-network:
