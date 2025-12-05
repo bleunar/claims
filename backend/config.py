@@ -13,7 +13,7 @@ def get_secret(key, default=None):
     Docker secrets are stored in /run/secrets/<key>.
     """
     # Check for Docker secret
-    secret_file = f'/run/secrets/{key}'
+    secret_file = f'/run/secrets/{key.lower()}'
     if os.path.exists(secret_file):
         try:
             with open(secret_file, 'r') as f:
