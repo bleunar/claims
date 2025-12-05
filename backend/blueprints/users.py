@@ -39,7 +39,7 @@ def upload_profile_image():
         upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
         allowed_extensions = current_app.config.get('ALLOWED_EXTENSIONS', {'jpg', 'jpeg', 'png', 'gif'})
         
-        success, result = save_uploaded_file(file, upload_folder, allowed_extensions, use_uuid=False)
+        success, result = save_uploaded_file(file, upload_folder, allowed_extensions, use_uuid=False, custom_filename=user_id)
         
         if not success:
             return jsonify({"success": False, "message": result}), 400
@@ -264,7 +264,7 @@ def update_user(user_id):
                 upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
                 allowed_extensions = current_app.config.get('ALLOWED_EXTENSIONS', {'jpg', 'jpeg', 'png', 'gif'})
                 
-                success, result = save_uploaded_file(file, upload_folder, allowed_extensions, use_uuid=False)
+                success, result = save_uploaded_file(file, upload_folder, allowed_extensions, use_uuid=False, custom_filename=user_id)
                 
                 if success:
                     profile_image = result

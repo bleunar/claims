@@ -143,6 +143,8 @@ export default function AdminDashboard() {
                   data={[
                     { name: "Operational", value: stats.operational ?? 0 },
                     { name: "Not Operational", value: stats.notOperational ?? 0 },
+                    { name: "Damaged", value: stats.damaged ?? 0 },
+                    { name: "Missing", value: stats.missing ?? 0 },
                   ]}
                   dataKey="value"
                   nameKey="name"
@@ -153,6 +155,8 @@ export default function AdminDashboard() {
                 >
                   <Cell fill={COLORS.operational} />
                   <Cell fill={COLORS.notOperational} />
+                  <Cell fill={COLORS.damaged} />
+                  <Cell fill={COLORS.missing} />
                 </Pie>
                 <Tooltip />
                 <Legend layout="vertical" verticalAlign="middle" align="right" />

@@ -31,7 +31,7 @@ function Edit() {
             name: response.data.name || "",
             email: response.data.email || "",
           }));
-          setImagePreview(response.data.profile || "/img/default.png");
+          setImagePreview(response.data.profile ? `${import.meta.env.VITE_API_URL}/uploads/${response.data.profile}` : "/img/default.png");
         }
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -58,7 +58,7 @@ function Edit() {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    
+
     if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
       toast.error("New password and confirm password do not match!");
       return;
@@ -71,7 +71,7 @@ function Edit() {
       if (selectedFile) {
         const imgData = new FormData();
         imgData.append("image", selectedFile);
-        
+
         const imgResponse = await uploadFile('/upload_profile_image', imgData);
         if (imgResponse.data.success) {
           imageUrl = imgResponse.data.image_url;
@@ -144,8 +144,10 @@ function Edit() {
             <FormField type="password" label="Current Password" name="currentPassword" value={formData.currentPassword} onChange={handleChange} />
             <FormField type="password" label="New Password" name="newPassword" value={formData.newPassword} onChange={handleChange} />
             <FormField type="password" label="Confirm New Password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} />
-            <button className="btn btn-success w-100 mt-3" onClick={handleSubmit}>Save Changes</button>
           </div>
+        </div>
+        <div className="col-12">
+          <button className="btn btn-success w-100 mt-3" onClick={handleSubmit}>Save Changes</button>
         </div>
       </div>
     </div>

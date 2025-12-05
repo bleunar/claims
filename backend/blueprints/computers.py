@@ -428,53 +428,92 @@ def update_computer_status_bulk():
                         status_enum = status_val
                     
                     # Check if part exists by name or category
-                    check_query = "SELECT id FROM computer_parts WHERE computer_id = %s AND (name = %s OR category = %s)"
+                    check_query = "SELECT id, name, status, serial_number FROM computer_parts WHERE computer_id = %s AND (name = %s OR category = %s) LIMIT 1"
                     cursor.execute(check_query, (com_id, part, part))
                     existing = cursor.fetchone()
                     
+                    new_serial = status_data.get("serial") # Get new serial if provided
+                    
                     if existing:
-                        part_id = existing[0]
+                        part_id, current_name, current_status, current_serial = existing
+                        changes = []
+                        
+                        # Detect changes
+                        effective_name = new_name if new_name else current_name
+                        
+                        if new_name and new_name != current_name:
+                            changes.append(f"{part.capitalize()} Name updated to {new_name}")
+                        
+                        if new_serial and new_serial != current_serial:
+                            changes.append(f"{part.capitalize()} Serial updated to {new_serial}")
+                            
+                        if status_enum != current_status:
+                            changes.append(f"{part.capitalize()} is {status_enum}")
+                        
                         # Update existing by ID
+                        update_fields = ["status = %s", "notes = %s"]
+                        update_params = [status_enum, notes]
+                        
                         if new_name:
-                            query = """
-                                UPDATE computer_parts 
-                                SET status = %s, notes = %s, name = %s
-                                WHERE id = %s
-                            """
-                            cursor.execute(query, (status_enum, notes, new_name, part_id))
-                        else:
-                            query = """
-                                UPDATE computer_parts 
-                                SET status = %s, notes = %s 
-                                WHERE id = %s
-                            """
-                            cursor.execute(query, (status_enum, notes, part_id))
+                            update_fields.append("name = %s")
+                            update_params.append(new_name)
+                            
+                        if new_serial:
+                            update_fields.append("serial_number = %s")
+                            update_params.append(new_serial)
+                            
+                        update_params.append(part_id)
+                        
+                        query = f"UPDATE computer_parts SET {', '.join(update_fields)} WHERE id = %s"
+                        cursor.execute(query, tuple(update_params))
+                        
+                        # Generate report if there are changes
+                        if changes:
+                            try:
+                                claims = get_jwt()
+                                user_email = claims.get('email', 'System')
+                                change_description = ". ".join(changes)
+                                if notes:
+                                    change_description += f". Notes: {notes}"
+                                
+                                report_query = """
+                                    INSERT INTO reports (computer_id, part_name, issue_description, status, submitted_by)
+                                    VALUES (%s, %s, %s, 'pending', %s)
+                                """
+                                # Use new_name if available, else current_name
+                                report_part_name = new_name if new_name else current_name
+                                cursor.execute(report_query, (com_id, report_part_name, change_description, user_email))
+                                logger.info(f'Report generated for {com_id} - {report_part_name}: {change_description}')
+                            except Exception as e:
+                                logger.error(f'Failed to auto-generate report in bulk update: {str(e)}')
+                                
                     else:
                         # Insert new
                         part_type = status_data.get("type", "standard")
                         category = part if part_type == 'standard' else 'other'
+                        # Use new_name if provided, else part (key)
+                        final_name = new_name if new_name else part
+                        final_serial = new_serial if new_serial else ''
+                        
                         query = """
-                            INSERT INTO computer_parts (computer_id, name, category, type, status, notes)
-                            VALUES (%s, %s, %s, %s, %s, %s)
+                            INSERT INTO computer_parts (computer_id, name, serial_number, category, type, status, notes)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
                         """
-                        cursor.execute(query, (com_id, part, category, part_type, status_enum, notes))
-                    
-                    # Auto-generate report if status is not operational
-                    logger.info(f'Checking status for report generation: {status_enum} (Part: {part})')
-                    if status_enum in ['not_operational', 'damaged', 'missing']:
-                        try:
-                            claims = get_jwt()
-                            user_email = claims.get('email', 'System')
-                            logger.info(f'Attempting to create report for {com_id} - {part} by {user_email}')
-                            
-                            report_query = """
-                                INSERT INTO reports (computer_id, part_name, issue_description, status, submitted_by)
-                                VALUES (%s, %s, %s, 'pending', %s)
-                            """
-                            cursor.execute(report_query, (com_id, part, notes, user_email))
-                            logger.info('Report insert query executed')
-                        except Exception as e:
-                            logger.error(f'Failed to auto-generate report in bulk update: {str(e)}')
+                        cursor.execute(query, (com_id, final_name, final_serial, category, part_type, status_enum, notes))
+                        
+                        # Auto-generate report for new non-operational parts
+                        if status_enum in ['not_operational', 'damaged', 'missing']:
+                            try:
+                                claims = get_jwt()
+                                user_email = claims.get('email', 'System')
+                                
+                                report_query = """
+                                    INSERT INTO reports (computer_id, part_name, issue_description, status, submitted_by)
+                                    VALUES (%s, %s, %s, 'pending', %s)
+                                """
+                                cursor.execute(report_query, (com_id, final_name, f"New part added with status: {status_enum}. Notes: {notes}", user_email))
+                            except Exception as e:
+                                logger.error(f'Failed to auto-generate report for new part: {str(e)}')
         
         logger.info(f'Bulk computer statuses updated')
         
@@ -485,36 +524,66 @@ def update_computer_status_bulk():
         return database_error_response(e, "Failed to update statuses")
 
 
-@computers_bp.route("/get_edit_data/", methods=["GET"])
-def get_edit_data():
+@computers_bp.route("/get_computer_details/<computer_id>", methods=["GET"])
+def get_computer_details(computer_id):
     """
-    Get all computer equipment data for editing.
+    Get detailed computer information including fresh parts data.
     """
     try:
-        query = """
-            SELECT c.id, c.name, l.name, c.lab_id, c.specs, c.other_parts 
-            FROM computers c 
-            LEFT JOIN laboratories l ON c.lab_id = l.id
-        """
-        results = execute_query(query, fetch_all=True, commit=False)
+        # Get basic computer info and legacy specs
+        query = "SELECT id, name, lab_id, specs, other_parts FROM computers WHERE id = %s"
+        computer = execute_query(query, (computer_id,), fetch_one=True, commit=False)
         
-        statuses = []
-        for row in results:
-            status = {
-                "id": row[0],
-                "pc_name": row[1],
-                "name": row[1],
-                "lab_name": row[2],
-                "lab_id": row[3],
-                "specs": row[4],
-                "other_parts": row[5]
-            }
-            statuses.append(status)
+        if not computer:
+            return jsonify({"error": "Computer not found"}), 404
+            
+        comp_id, name, lab_id, legacy_specs, legacy_other_parts = computer
         
-        return jsonify(statuses), 200
+        # Get all parts from computer_parts table
+        parts_query = "SELECT name, serial_number, category, type FROM computer_parts WHERE computer_id = %s"
+        parts = execute_query(parts_query, (computer_id,), fetch_all=True, commit=False)
+        
+        specs = {}
+        other_parts = []
+        
+        if parts:
+            for part in parts:
+                part_name, serial, category, part_type = part
+                
+                if part_type == 'standard':
+                    # For standard parts, category is the key (e.g., 'monitor', 'keyboard')
+                    specs[category] = {
+                        "name": part_name,
+                        "serial": serial
+                    }
+                else:
+                    # For custom/other parts
+                    other_parts.append({
+                        "name": part_name,
+                        "serial": serial
+                    })
+        else:
+            # Fallback to legacy data if computer_parts is empty
+            if legacy_specs:
+                specs = json.loads(legacy_specs) if isinstance(legacy_specs, str) else legacy_specs
+                # Ensure structure is consistent (convert string values to objects if needed)
+                for key, val in specs.items():
+                    if isinstance(val, str):
+                        specs[key] = {"name": val, "serial": ""}
+            
+            if legacy_other_parts:
+                other_parts = json.loads(legacy_other_parts) if isinstance(legacy_other_parts, str) else legacy_other_parts
+
+        return jsonify({
+            "id": comp_id,
+            "pc_name": name,
+            "lab_id": lab_id,
+            "specs": specs,
+            "other_parts": other_parts
+        }), 200
         
     except Exception as e:
-        logger.error(f'Get edit data error: {str(e)}')
+        logger.error(f'Get computer details error: {str(e)}')
         return jsonify({"error": str(e)}), 500
 
 
@@ -531,13 +600,13 @@ def update_edit_data(pc_id):
         
         name = data.get("pc_name")
         specs = data.get("specs", {})
-        other_parts = data.get("other_parts", {})
+        other_parts = data.get("other_parts", [])
         
-        # Convert to JSON strings
+        # Convert to JSON strings for computers table
         specs_json = json.dumps(specs) if isinstance(specs, dict) else specs
-        other_parts_json = json.dumps(other_parts) if isinstance(other_parts, dict) else other_parts
+        other_parts_json = json.dumps(other_parts) if isinstance(other_parts, (list, dict)) else other_parts
         
-        # Update computers
+        # 1. Update computers table
         query = """
             UPDATE computers 
             SET name = %s, specs = %s, other_parts = %s 
@@ -545,10 +614,76 @@ def update_edit_data(pc_id):
         """
         execute_query(query, (name, specs_json, other_parts_json, pc_id))
         
-        # Note: We might need to update computer_parts names if they changed, 
-        # but usually specs keys remain consistent. 
-        # If the user renames a part in specs, we might need complex logic to sync computer_parts.
-        # For now, we assume parts structure remains stable or is handled by re-initialization if needed.
+        # 2. Update computer_parts table and generate reports
+        
+        # Get current user for report
+        claims = get_jwt()
+        user_email = claims.get('email', 'System')
+        
+        # Update standard parts
+        if isinstance(specs, dict):
+            for category, details in specs.items():
+                part_name = details.get('name', '')
+                serial_number = details.get('serial', '')
+                
+                # Check if part exists
+                check_query = "SELECT id, name, serial_number FROM computer_parts WHERE computer_id = %s AND category = %s AND type = 'standard' LIMIT 1"
+                existing_part = execute_query(check_query, (pc_id, category), fetch_one=True, commit=False)
+                
+                if existing_part:
+                    part_id, current_name, current_serial = existing_part
+                    changes = []
+                    
+                    if part_name and part_name != current_name:
+                        changes.append(f"{category.capitalize()} Name updated to {part_name}")
+                    
+                    if serial_number and serial_number != current_serial:
+                        changes.append(f"{category.capitalize()} Serial updated to {serial_number}")
+                        
+                    if changes:
+                        try:
+                            change_description = ". ".join(changes)
+                            report_query = """
+                                INSERT INTO reports (computer_id, part_name, issue_description, status, submitted_by)
+                                VALUES (%s, %s, %s, 'pending', %s)
+                            """
+                            execute_query(report_query, (pc_id, part_name if part_name else current_name, change_description, user_email))
+                            logger.info(f'Report generated for {pc_id}: {change_description}')
+                        except Exception as e:
+                            logger.error(f'Failed to generate report for update: {str(e)}')
+
+                    update_query = """
+                        UPDATE computer_parts 
+                        SET name = %s, serial_number = %s 
+                        WHERE computer_id = %s AND category = %s AND type = 'standard'
+                    """
+                    execute_query(update_query, (part_name, serial_number, pc_id, category))
+                else:
+                    # Insert if missing
+                    insert_query = """
+                        INSERT INTO computer_parts (computer_id, name, serial_number, category, type, status, notes)
+                        VALUES (%s, %s, %s, %s, 'standard', 'operational', '')
+                    """
+                    execute_query(insert_query, (pc_id, part_name, serial_number, category))
+
+        # Update custom parts (Delete all custom parts and re-insert)
+        # Note: Tracking changes for custom parts is harder because they are deleted and re-inserted.
+        # We could try to match by name, but for now we'll skip reporting for custom parts edits 
+        # unless we implement a smarter diffing logic.
+        delete_custom_query = "DELETE FROM computer_parts WHERE computer_id = %s AND type = 'custom'"
+        execute_query(delete_custom_query, (pc_id,))
+        
+        if isinstance(other_parts, list):
+            for item in other_parts:
+                if isinstance(item, dict):
+                    part_name = item.get('name', '')
+                    serial_number = item.get('serial', '')
+                    
+                    insert_custom_query = """
+                        INSERT INTO computer_parts (computer_id, name, serial_number, category, type, status, notes)
+                        VALUES (%s, %s, %s, 'other', 'custom', 'operational', '')
+                    """
+                    execute_query(insert_custom_query, (pc_id, part_name, serial_number))
         
         logger.info(f'Computer data updated: {pc_id}')
         

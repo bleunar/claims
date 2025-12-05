@@ -101,7 +101,7 @@ CREATE TABLE `reports` (
   `computer_id` varchar(255) DEFAULT NULL,
   `part_name` varchar(255) DEFAULT NULL,
   `issue_description` text DEFAULT NULL,
-  `status` ENUM('pending', 'in_progress', 'resolved') NOT NULL DEFAULT 'pending',
+  `status` ENUM('pending', 'sent', 'complete') NOT NULL DEFAULT 'pending',
   `submitted_by` varchar(255) DEFAULT 'System',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),

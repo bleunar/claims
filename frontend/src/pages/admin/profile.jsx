@@ -72,7 +72,7 @@ function ViewProfile() {
       >
         {/* Profile Picture */}
         <img
-          src={user?.image || "/img/default.png"}
+          src={user?.profile ? `${import.meta.env.VITE_API_URL}/uploads/${user.profile}` : "/img/default.png"}
           alt="Profile"
           style={{
             width: "150px",

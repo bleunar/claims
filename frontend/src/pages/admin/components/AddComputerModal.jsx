@@ -243,7 +243,6 @@ export default function AddComputerModal({ lab, addComputer, addComputers, onClo
                           placeholder="Serial #"
                           value={parts[p].serial}
                           onChange={(e) => handleChange(p, "serial", e.target.value)}
-                          required
                         />
                       </div>
                     </div>

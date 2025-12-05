@@ -25,7 +25,7 @@ def allowed_file(filename, allowed_extensions):
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
 
-def save_uploaded_file(file, upload_folder, allowed_extensions, use_uuid=False):
+def save_uploaded_file(file, upload_folder, allowed_extensions, use_uuid=False, custom_filename=None):
     """
     Save uploaded file securely.
     
@@ -34,6 +34,7 @@ def save_uploaded_file(file, upload_folder, allowed_extensions, use_uuid=False):
         upload_folder: Directory to save the file
         allowed_extensions: Set of allowed file extensions
         use_uuid: If True, generate unique filename with UUID
+        custom_filename: If provided, use this filename (preserving extension)
         
     Returns:
         tuple: (success: bool, filename: str or error_message: str)
@@ -53,9 +54,13 @@ def save_uploaded_file(file, upload_folder, allowed_extensions, use_uuid=False):
         os.makedirs(upload_folder, exist_ok=True)
         
         # Generate filename
-        if use_uuid:
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        
+        if custom_filename:
+            # Use custom filename
+            filename = f"{custom_filename}.{ext}"
+        elif use_uuid:
             # Use UUID to prevent filename collisions
-            ext = file.filename.rsplit('.', 1)[1].lower()
             filename = f"{uuid.uuid4().hex}.{ext}"
         else:
             # Use secure_filename to sanitize

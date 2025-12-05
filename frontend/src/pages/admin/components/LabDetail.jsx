@@ -106,26 +106,16 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
 
     const fetchEditData = async () => {
       try {
-        const response = await api.get('/get_edit_data');
-        const data = response.data;
-        console.log("Fetched edit data array:", data);
-
-        const pcData = data.find((item) => item.id === editPC.id);
-
-        if (!pcData) {
-          console.warn("No PC found for ID:", editPC.id);
-          return;
-        }
+        const response = await api.get(`/get_computer_details/${editPC.id}`);
+        const pcData = response.data;
+        console.log("Fetched computer details:", pcData);
 
         setEditData({
           com_id: pcData.id,
           lab_id: pcData.lab_id,
           pcNumber: pcData.pc_name || "",
           parts: pcData.specs || {},
-          otherParts: Array.isArray(pcData.other_parts) ? pcData.other_parts : Object.entries(pcData.other_parts || {}).map(([name, serial]) => ({
-            name,
-            serial,
-          })),
+          otherParts: Array.isArray(pcData.other_parts) ? pcData.other_parts : [],
         });
       } catch (err) {
         console.error("Error fetching computer details:", err);
@@ -659,6 +649,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
 
       {editPC && (
         <div
+          className="modal-backdrop"
           style={{
             position: "fixed",
             top: 0,
@@ -671,114 +662,56 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
             alignItems: "center",
             zIndex: 9999,
             overflowY: "auto",
-            padding: "15px",
           }}
           onClick={() => setEditPC(null)}
         >
           <div
+            className="modal-card shadow-lg rounded-3"
             style={{
               background: "#fff",
-              padding: "20px 25px",
-              borderRadius: 16,
-              width: "100%",
-              maxWidth: "700px",
-              boxShadow: "0 5px 15px rgba(0,0,0,0.2)",
+              maxWidth: "900px",
+              width: "90%",
+              maxHeight: "90vh",
+              overflowY: "auto"
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h4 style={{ color: "#006633", marginBottom: 20, fontWeight: 600 }}>
-              Edit Computer – {editData.pcNumber || ""}
-            </h4>
-
-            <div
-              style={{
-                padding: 12,
-                border: "1px solid #ccc",
-                borderRadius: 8,
-                marginBottom: 15,
-                backgroundColor: "#f9fdfd",
-              }}
-            >
-              <label style={{ fontSize: 14, fontWeight: 600, color: "#006633" }}>
-                PC Number
-              </label>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginTop: 4,
-                }}
-              >
-                <FaDesktop />
-                <input
-                  type="text"
-                  value={editData.pcNumber || ""}
-                  onChange={(e) =>
-                    setEditData({ ...editData, pcNumber: e.target.value })
-                  }
-                  style={{
-                    flex: 1,
-                    borderRadius: 6,
-                    border: "1px solid #ccc",
-                    padding: "6px 8px",
-                    fontSize: 14,
-                    backgroundColor: "transparent",
-                    color: "#000",
-                  }}
-                />
-              </div>
+            <div className="modal-header bg-success text-white d-flex justify-content-between align-items-center p-3">
+              <h5 className="mb-0">Edit Computer – {editData.pcNumber || ""}</h5>
+              <button onClick={() => setEditPC(null)} className="btn-close text-white"><FaTimes /></button>
             </div>
 
-            <div
-              style={{
-                padding: 12,
-                border: "1px solid #ccc",
-                borderRadius: 8,
-                marginBottom: 15,
-                backgroundColor: "#e6f4ea",
-              }}
-            >
-              <h5 style={{ color: "#006633", marginBottom: 10, fontWeight: 600 }}>
-                Parts Serial Numbers
-              </h5>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                  gap: 10,
-                }}
-              >
-                {["monitor", "systemUnit", "keyboard", "mouse", "headphone", "hdmi", "power", "wifi"].map(
-                  (part) => {
+            <div className="modal-body p-4">
+              {/* PC Number */}
+              <div className="mb-3">
+                <label className="form-label fw-bold">PC Number</label>
+                <div className="input-group input-group-sm">
+                  <span className="input-group-text"><FaDesktop /></span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={editData.pcNumber || ""}
+                    onChange={(e) => setEditData({ ...editData, pcNumber: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Parts Section */}
+              <div className="p-3 mb-3 rounded-2" style={{ backgroundColor: "#e8f5e9" }}>
+                <h6 className="fw-bold text-success mb-3">Parts Serial Numbers</h6>
+                <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3">
+                  {["monitor", "systemUnit", "keyboard", "mouse", "headphone", "hdmi", "power", "wifi"].map((part) => {
                     const Icon = partIcons[part] || FaPlug;
                     return (
-                      <div key={part}>
-                        <label
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "#006633",
-                            marginBottom: 4,
-                            display: "block",
-                          }}
-                        >
-                          {part.charAt(0).toUpperCase() + part.slice(1)}
+                      <div key={part} className="col mb-3">
+                        <label className="form-label text-start text-capitalize w-100">
+                          <span className="fw-bold me-1"><Icon className="text-success" /></span> {part}
                         </label>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            border: "1px solid #ccc",
-                            borderRadius: 6,
-                            padding: "4px 6px",
-                          }}
-                        >
-                          <Icon />
+                        <div className="d-flex gap-2">
                           <input
                             type="text"
-                            placeholder="Name"
+                            className="form-control form-control-sm"
+                            placeholder="Name/Model"
                             value={editData.parts?.[part]?.name || (typeof editData.parts?.[part] === 'string' ? editData.parts?.[part] : "")}
                             onChange={(e) =>
                               setEditData({
@@ -792,20 +725,11 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
                                 },
                               })
                             }
-                            style={{
-                              flex: 1,
-                              border: "none",
-                              outline: "none",
-                              fontSize: 14,
-                              padding: "4px 2px",
-                              backgroundColor: "transparent",
-                              color: "#000",
-                              borderRight: "1px solid #eee"
-                            }}
                           />
                           <input
                             type="text"
-                            placeholder="Serial"
+                            className="form-control form-control-sm"
+                            placeholder="Serial #"
                             value={editData.parts?.[part]?.serial || ""}
                             onChange={(e) =>
                               setEditData({
@@ -819,222 +743,74 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
                                 },
                               })
                             }
-                            style={{
-                              flex: 1,
-                              border: "none",
-                              outline: "none",
-                              fontSize: 14,
-                              padding: "4px 2px",
-                              backgroundColor: "transparent",
-                              color: "#000",
-                            }}
                           />
                         </div>
                       </div>
                     );
-                  }
+                  })}
+                </div>
+              </div>
+
+              {/* Other Parts Toggle */}
+              <div className="mb-2">
+                {!showOtherParts && (
+                  <button type="button" className="btn btn-outline-success btn-sm" onClick={() => { setShowOtherParts(true); addOtherPart(); }}>
+                    + Add Other Parts
+                  </button>
                 )}
               </div>
-            </div>
 
-            {/* --- Other Parts Toggle --- */}
-            <div style={{ marginBottom: 10 }}>
-              <button
-                type="button"
-                onClick={() => setShowOtherParts(!showOtherParts)}
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  backgroundColor: "#ff9800",
-                  color: "#fff",
-                  fontWeight: 600,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  cursor: "pointer",
-                }}
-              >
-                {showOtherParts ? "▼ Other Parts" : "► Other Parts"}
-              </button>
-
+              {/* Other Parts Section */}
               {showOtherParts && (
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: 12,
-                    border: "1px solid #ccc",
-                    borderRadius: 8,
-                    backgroundColor: "#fff3e0",
-                  }}
-                >
-                  {(editData.otherParts || []).map((op, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: 8,
-                        marginBottom: 10,
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <label
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "#006633",
-                          }}
-                        >
-                          Part Name
-                        </label>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            border: "1px solid #ccc",
-                            borderRadius: 6,
-                            padding: "4px 6px",
-                            marginBottom: 4,
-                          }}
-                        >
-                          <FaPlug />
-                          <input
-                            type="text"
-                            value={op?.name || ""}
-                            onChange={(e) =>
-                              handleOtherPartChange(idx, "name", e.target.value)
-                            }
-                            placeholder="Part Name"
-                            style={{
-                              flex: 1,
-                              border: "none",
-                              outline: "none",
-                              padding: "4px 2px",
-                              backgroundColor: "transparent",
-                              color: "#000", // text is black
-                            }}
-                          />
-                        </div>
+                <div className="p-3 mb-3 rounded-2" style={{ backgroundColor: "#fff3e0", border: "1px solid #ffb74d" }}>
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h6 className="fw-bold text-warning mb-0">Other Parts</h6>
+                    <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => setShowOtherParts(false)}>Hide</button>
+                  </div>
 
-                        <label
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "#006633",
-                          }}
-                        >
-                          Serial Number
-                        </label>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            border: "1px solid #ccc",
-                            borderRadius: 6,
-                            padding: "4px 6px",
-                          }}
-                        >
-                          <FaHashtag />
+                  {(editData.otherParts || []).map((op, idx) => (
+                    <div key={idx} className="row g-2 mb-2 align-items-end">
+                      <div className="col-md-5">
+                        <div className="input-group input-group-sm">
+                          <span className="input-group-text"><FaPlug /></span>
                           <input
                             type="text"
-                            value={op?.serial || ""}
-                            onChange={(e) =>
-                              handleOtherPartChange(idx, "serial", e.target.value)
-                            }
-                            placeholder="Serial Number"
-                            style={{
-                              flex: 1,
-                              border: "none",
-                              outline: "none",
-                              padding: "4px 2px",
-                              backgroundColor: "transparent",
-                              color: "#000", // text is black
-                            }}
+                            className="form-control"
+                            placeholder="Part Name"
+                            value={op.name || ""}
+                            onChange={(e) => handleOtherPartChange(idx, "name", e.target.value)}
                           />
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeOtherPart(idx)}
-                        style={{
-                          backgroundColor: "#FF4D4D",
-                          border: "none",
-                          color: "#fff",
-                          borderRadius: 6,
-                          padding: "6px 10px",
-                          cursor: "pointer",
-                          marginTop: 18,
-                          height: 38,
-                        }}
-                      >
-                        <FaTrashAlt />
-                      </button>
+                      <div className="col-md-5">
+                        <div className="input-group input-group-sm">
+                          <span className="input-group-text"><FaHashtag /></span>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Serial Number"
+                            value={op.serial || ""}
+                            onChange={(e) => handleOtherPartChange(idx, "serial", e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="col-md-2">
+                        <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => removeOtherPart(idx)}><FaTrashAlt /></button>
+                      </div>
                     </div>
                   ))}
+                  <div className="d-flex justify-content-end mt-2">
+                    <button type="button" className="btn btn-outline-success btn-sm" onClick={addOtherPart}>
+                      + Add Another Part
+                    </button>
+                  </div>
                 </div>
               )}
-            </div>
 
-            {/* --- Add Other Part Button (always visible) --- */}
-            <div style={{ marginBottom: 15 }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowOtherParts(true);
-                  addOtherPart();
-                }}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  backgroundColor: "#00C49A",
-                  color: "#fff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                + Add Other Part
-              </button>
-            </div>
-
-            {/* Footer */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-              <button
-                type="button"
-                onClick={() => setEditPC(null)}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: 6,
-                  border: "none",
-                  backgroundColor: "#FFCC00",
-                  color: "#006633",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleEditSubmit}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: 6,
-                  border: "none",
-                  backgroundColor: "#006633",
-                  color: "#fff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Save Changes
-              </button>
+              <div className="modal-footer d-flex justify-content-end gap-2 border-0 p-0 mt-3">
+                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setEditPC(null)}>Cancel</button>
+                <button type="button" className="btn btn-success btn-sm" onClick={handleEditSubmit}>Save Changes</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1422,13 +1198,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
             {/* Body */}
             <div className="modal-body" style={{ padding: 20 }}>
               {/* Main parts grid */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: 12,
-                }}
-              >
+              <div className="row row-cols-2 row-cols-md-4">
                 {Object.keys(selectedPC.parts).map((part) => {
                   const Icon = partIcons[part];
                   const style = getStatusStyle(selectedPC.id);
@@ -1442,28 +1212,31 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
                   }
 
                   return (
-                    <div
-                      key={part}
-                      style={{
-                        textAlign: "center",
-                        padding: 12,
-                        borderRadius: 10,
-                        background: "#f8f9fa",
-                      }}
-                    >
-                      <Icon size={50} color={style.color} />
-                      <div style={{ textTransform: "capitalize", marginTop: 6 }}>
-                        {part}
+                    <div className="col p-1">
+                      <div
+                        key={part}
+                        style={{
+                          textAlign: "center",
+                          padding: 12,
+                          borderRadius: 10,
+                          background: "#f8f9fa",
+                        }}
+                      >
+                        <Icon size={50} color={style.color} />
+                        <div style={{ textTransform: "capitalize", marginTop: 6 }}>
+                          {part}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#495057", marginTop: 4 }}>
+                          {partLabel}
+                        </div>
+                        <StatusButtons
+                          part={part}
+                          compId={selectedPC.id}
+                          status={statuses[selectedPC.id]?.[part] || "operational"}
+                          setStatus={setStatus}
+                        />
                       </div>
-                      <div style={{ fontSize: 12, color: "#495057", marginTop: 4 }}>
-                        {partLabel}
-                      </div>
-                      <StatusButtons
-                        part={part}
-                        compId={selectedPC.id}
-                        status={statuses[selectedPC.id]?.[part] || "operational"}
-                        setStatus={setStatus}
-                      />
+
                     </div>
                   );
                 })}

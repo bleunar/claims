@@ -189,6 +189,7 @@ def get_admin_computer_reports():
     """
     try:
         # Fetch reports with computer and lab details
+        # Fetch reports with computer and lab details, filtering for pending and latest per component
         query = """
             SELECT 
                 r.id, 
@@ -200,8 +201,17 @@ def get_admin_computer_reports():
                 c.name as pc_name,
                 l.name as lab_name
             FROM reports r
+            JOIN (
+                SELECT computer_id, part_name, MAX(created_at) as max_created_at
+                FROM reports
+                WHERE status = 'pending'
+                GROUP BY computer_id, part_name
+            ) latest ON r.computer_id = latest.computer_id 
+                    AND r.part_name = latest.part_name 
+                    AND r.created_at = latest.max_created_at
             LEFT JOIN computers c ON r.computer_id = c.id
             LEFT JOIN laboratories l ON c.lab_id = l.id
+            WHERE r.status = 'pending'
             ORDER BY r.created_at DESC
         """
         results = execute_query(query, fetch_all=True, commit=False)
@@ -266,6 +276,30 @@ def send_report_email():
         
         if success:
             logger.info(f'Report email sent by {user_email}')
+            
+            # Update report statuses
+            # summary contains report objects with 'com_id' which is the report ID
+            with get_db_cursor() as cursor:
+                for report in summary:
+                    report_id = report.get('com_id')
+                    if report_id:
+                        # 1. Update this report to 'sent'
+                        cursor.execute("UPDATE reports SET status = 'sent' WHERE id = %s", (report_id,))
+                        
+                        # 2. Find computer_id and part_name for this report to handle duplicates
+                        cursor.execute("SELECT computer_id, part_name FROM reports WHERE id = %s", (report_id,))
+                        result = cursor.fetchone()
+                        
+                        if result:
+                            computer_id, part_name = result
+                            # 3. Update other 'pending' reports for this component to 'complete'
+                            # This clears the queue of older/duplicate reports for the same item
+                            cursor.execute("""
+                                UPDATE reports 
+                                SET status = 'complete' 
+                                WHERE computer_id = %s AND part_name = %s AND status = 'pending' AND id != %s
+                            """, (computer_id, part_name, report_id))
+                            
             return {"message": "Email sent successfully"}, 200
         else:
             return {"error": "Failed to send email"}, 500

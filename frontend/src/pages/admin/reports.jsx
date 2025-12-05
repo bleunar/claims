@@ -43,16 +43,14 @@ export default function Reports() {
       // Map backend keys to frontend structure
       const mappedData = response.data.map(r => ({
         ...r,
-        item: r.pc_name,
+        item: r.pc_name !== "Unknown" ? r.pc_name : (r.computer_id || "Unknown"),
         lab: r.lab_name,
         notes: r.issue_description,
         date: r.created_at,
-        // Map status to frontend capitalized format if needed for colors
+        // Map status to frontend capitalized format
         status: r.status === 'not_operational' ? 'Notoperational' :
-          r.status === 'damaged' ? 'Damaged' :
-            r.status === 'missing' ? 'Missing' :
-              r.status === 'operational' ? 'Operational' :
-                r.status.charAt(0).toUpperCase() + r.status.slice(1)
+          r.status === 'in_progress' ? 'In Progress' :
+            r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : 'Unknown'
       }));
 
       const sortedData = mappedData.sort(
@@ -187,32 +185,54 @@ export default function Reports() {
       name: "Status",
       selector: (row) => row.status,
       sortable: true,
-      cell: (row) => (
-        <span
-          style={{
-            backgroundColor:
-              row.status === "Operational"
-                ? "#006633"
-                : row.status === "Warning"
-                  ? "#FFCC00"
-                  : row.status === "Notoperational"
-                    ? "#FFCC00"
-                    : row.status === "Damaged"
-                      ? "#dc3545"
-                      : row.status === "Missing"
-                        ? "#6c757d"
-                        : "#f8f9fa",
-            color:
-              row.status === "Notoperational" || row.status === "Warning"
-                ? "#000"
-                : "#fff",
-            padding: "3px 7px",
-            borderRadius: "5px",
-          }}
-        >
-          {row.status}
-        </span>
-      ),
+      cell: (row) => {
+        let bgColor = "#f8f9fa";
+        let textColor = "#000";
+
+        switch (row.status) {
+          case "Operational":
+          case "Resolved":
+            bgColor = "#006633";
+            textColor = "#fff";
+            break;
+          case "Warning":
+          case "Notoperational":
+          case "In Progress":
+            bgColor = "#FFCC00";
+            textColor = "#000";
+            break;
+          case "Damaged":
+            bgColor = "#dc3545";
+            textColor = "#fff";
+            break;
+          case "Missing":
+            bgColor = "#6c757d";
+            textColor = "#fff";
+            break;
+          case "Pending":
+            bgColor = "#17a2b8"; // Info blue/cyan
+            textColor = "#fff";
+            break;
+          default:
+            bgColor = "#e2e3e5";
+            textColor = "#000";
+        }
+
+        return (
+          <span
+            style={{
+              backgroundColor: bgColor,
+              color: textColor,
+              padding: "3px 7px",
+              borderRadius: "5px",
+              fontWeight: "500",
+              fontSize: "0.85rem"
+            }}
+          >
+            {row.status}
+          </span>
+        )
+      },
     },
     { name: "Date", selector: (row) => new Date(row.date).toLocaleString(), sortable: true },
     { name: "Notes", selector: (row) => row.notes || "—" },
