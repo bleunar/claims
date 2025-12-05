@@ -51,14 +51,15 @@ def create_default_admin():
     try:
         import os
         import secrets
+        from flask import current_app
         
         # Default admin credentials
         admin_id = "0"
         admin_name = "admin"
         admin_email = "admin@example.com"
         admin_role = "admin"
-        # Get password from env or generate random secure password
-        admin_password = os.getenv('ADMIN_INIT_PASSWORD')
+        # Get password from config (which handles secrets)
+        admin_password = current_app.config.get('ADMIN_INIT_PASSWORD')
         if not admin_password:
             admin_password = secrets.token_urlsafe(12)
             logger.warning('No ADMIN_INIT_PASSWORD set. Generated random password.')
