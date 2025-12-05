@@ -194,7 +194,7 @@ function AdminLayout() {
                       onMouseOut={e => !isActive && (e.currentTarget.style.backgroundColor = "#004d26")}
                     >
                       {React.cloneElement(link.icon, { size: 18 })}
-                      {!isMobile && link.label}
+                      {link.label}
                     </button>
                   </li>
                 );

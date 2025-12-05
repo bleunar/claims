@@ -96,10 +96,13 @@ def get_data():
         computers = execute_query("SELECT id, lab_id FROM computers", fetch_all=True, commit=False)
         
         # --- Stats ---
-        operational_count = sum(1 for part in computer_parts if part[4] == 'operational')
-        damaged_count = sum(1 for part in computer_parts if part[4] == 'damaged')
-        missing_count = sum(1 for part in computer_parts if part[4] == 'missing')
-        not_operational_count = sum(1 for part in computer_parts if part[4] == 'not_operational')
+        # computer_parts: id, computer_id, name, serial_number, category, type, status, notes
+        # Indices: 0=id, 1=comp_id, 2=name, 3=serial, 4=category, 5=type, 6=status, 7=notes
+        
+        operational_count = sum(1 for part in computer_parts if part[6] == 'operational')
+        damaged_count = sum(1 for part in computer_parts if part[6] == 'damaged')
+        missing_count = sum(1 for part in computer_parts if part[6] == 'missing')
+        not_operational_count = sum(1 for part in computer_parts if part[6] == 'not_operational')
         
         result['stats'] = {
             'operational': operational_count,
@@ -112,23 +115,24 @@ def get_data():
             'totalUsers': len(users)
         }
         
-        # --- Computer Part Status (Group by part name) ---
-        # computer_parts: id, computer_id, name, type, status, notes
+        # --- Computer Part Status (Group by category) ---
         part_stats = {}
         for part in computer_parts:
-            name = part[2]
-            status = part[4]
-            if name not in part_stats:
-                part_stats[name] = {'name': name, 'operational': 0, 'notOperational': 0, 'missing': 0, 'damaged': 0}
+            # Use category (index 4) for grouping, fallback to name (index 2) if category is null
+            category = part[4] if part[4] else part[2]
+            status = part[6]
+            
+            if category not in part_stats:
+                part_stats[category] = {'name': category, 'operational': 0, 'notOperational': 0, 'missing': 0, 'damaged': 0}
             
             if status == 'operational':
-                part_stats[name]['operational'] += 1
+                part_stats[category]['operational'] += 1
             elif status == 'not_operational':
-                part_stats[name]['notOperational'] += 1
+                part_stats[category]['notOperational'] += 1
             elif status == 'missing':
-                part_stats[name]['missing'] += 1
+                part_stats[category]['missing'] += 1
             elif status == 'damaged':
-                part_stats[name]['damaged'] += 1
+                part_stats[category]['damaged'] += 1
                 
         result['computerPartStatus'] = list(part_stats.values())
         
@@ -157,7 +161,7 @@ def get_data():
         
         for part in computer_parts:
             comp_id = part[1]
-            status = part[4]
+            status = part[6]
             if comp_id in comp_lab_map:
                 lab_id = comp_lab_map[comp_id]
                 if lab_id in lab_issues:

@@ -17,6 +17,8 @@ import {
 import api from "../../../utils/api";
 import { toast } from "react-toastify";
 import AddComputerModal from "./AddComputerModal";
+import AddBulkComputerModal from "./AddBulkComputerModal";
+import { Dropdown } from "react-bootstrap";
 
 const statusColors = {
   operational: { color: "#006633", label: "Operational", priority: 0 },
@@ -62,10 +64,11 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
   const navigate = useNavigate();
   // Detect role based on current path
   const currentRole = location.pathname.startsWith('/itsd') ? 'itsd' :
-                      location.pathname.startsWith('/technician') ? 'technician' : 'admin';
+    location.pathname.startsWith('/technician') ? 'technician' : 'admin';
   const [statuses, setStatuses] = useState({});
   const [selectedPC, setSelectedPC] = useState(null);
   const [showAddComputer, setShowAddComputer] = useState(false);
+  const [showBulkAddModal, setShowBulkAddModal] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [deletePC, setDeletePC] = useState(null);
   const [editPC, setEditPC] = useState(null);
@@ -73,6 +76,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
   const [selectedPCs, setSelectedPCs] = useState([]);
   const [otherParts, setotherParts] = useState({});
   const [selectedStatus, setSelectedStatus] = useState([]);
+  const [newPartName, setNewPartName] = useState("");
 
 
   console.log("otherParts in LabDetail:", selectedPC)
@@ -304,23 +308,27 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <button onClick={back} className="btn btn-secondary btn-sm">
+        <button onClick={back} className="btn btn-secondary btn-sm text-nowrap">
           ← Back to Labs
         </button>
-        <div>
+        <div className="d-flex">
           <button
             onClick={() => setShowAddComputer(true)}
-            className="btn"
+            className="btn btn-sm text-nowrap"
             style={{ backgroundColor: "#006633", color: "white", marginRight: 10 }}>
             + Add Computer
           </button>
 
-          <button
-            onClick={() => setShowQuickUpdate(true)}
-            className="btn btn-warning"
-            style={{ color: "#000" }}>
-            Quick Update
-          </button>
+          <Dropdown>
+            <Dropdown.Toggle variant="success" size="sm" id="dropdown-basic" style={{ backgroundColor: "#006633", color: "white", marginRight: 10 }}>
+              Others
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu>
+              <Dropdown.Item onClick={() => setShowQuickUpdate(true)}>Quick Update</Dropdown.Item>
+              <Dropdown.Item onClick={() => setShowBulkAddModal(true)}>Bulk Add</Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
         </div>
       </div>
       {saveMsg && (
@@ -431,7 +439,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
                   padding: "8px 18px",
                   fontWeight: "500",
                 }}
-                onClick={() => navigate(currentRole === 'technician' ? `/${currentRole}/TechnicianLabs` : `/${currentRole}/labs`)}
+                onClick={() => setSaveMsg("")}
               >
                 Dismiss
               </button>
@@ -441,7 +449,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
       )}
 
 
-      <h3 style={{ color: "#006633", marginBottom: 15 }}>Computer Lab{lab.name}– {lab.location}</h3>
+      <h3 style={{ color: "#006633", marginBottom: 15 }}>{lab.name} – {lab.location}</h3>
 
       <div
         style={{
@@ -499,7 +507,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
             }}
           >
             <FaDesktop size={50} color="#fff" />
-            <h6 style={{ marginTop: 10, color: "#fff" }}>PC {pc.pcNumber}</h6>
+            <h6 style={{ marginTop: 10, color: "#fff" }} className="fw-bold">{pc.pcNumber}</h6>
 
 
             <div
@@ -611,7 +619,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
             </h5>
             <p style={{ color: "#444", fontSize: "15px" }}>
               Are you sure you want to delete{" "}
-              <strong>PC {deletePC.pcNumber}</strong>?
+              <strong>{deletePC.pcNumber}</strong>?
             </p>
             <div
               style={{
@@ -679,7 +687,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
             onClick={(e) => e.stopPropagation()}
           >
             <h4 style={{ color: "#006633", marginBottom: 20, fontWeight: 600 }}>
-              Edit Computer – PC {editData.pcNumber || ""}
+              Edit Computer – {editData.pcNumber || ""}
             </h4>
 
             <div
@@ -770,12 +778,45 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
                           <Icon />
                           <input
                             type="text"
-                            placeholder={`${part} Serial`}
-                            value={editData.parts?.[part] || ""}
+                            placeholder="Name"
+                            value={editData.parts?.[part]?.name || (typeof editData.parts?.[part] === 'string' ? editData.parts?.[part] : "")}
                             onChange={(e) =>
                               setEditData({
                                 ...editData,
-                                parts: { ...editData.parts, [part]: e.target.value },
+                                parts: {
+                                  ...editData.parts,
+                                  [part]: {
+                                    ...(typeof editData.parts?.[part] === 'object' ? editData.parts?.[part] : { name: editData.parts?.[part] || "" }),
+                                    name: e.target.value
+                                  }
+                                },
+                              })
+                            }
+                            style={{
+                              flex: 1,
+                              border: "none",
+                              outline: "none",
+                              fontSize: 14,
+                              padding: "4px 2px",
+                              backgroundColor: "transparent",
+                              color: "#000",
+                              borderRight: "1px solid #eee"
+                            }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Serial"
+                            value={editData.parts?.[part]?.serial || ""}
+                            onChange={(e) =>
+                              setEditData({
+                                ...editData,
+                                parts: {
+                                  ...editData.parts,
+                                  [part]: {
+                                    ...(typeof editData.parts?.[part] === 'object' ? editData.parts?.[part] : { name: editData.parts?.[part] || "" }),
+                                    serial: e.target.value
+                                  }
+                                },
                               })
                             }
                             style={{
@@ -1094,6 +1135,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
                         onClick={() => {
                           setSelectedPart(part);
                           setSelectedStatus("");
+                          setNewPartName("");
                           setSelectedPCs([]);
                         }}
                       >
@@ -1107,18 +1149,33 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
                 </div>
               </div>
 
-              {/* Step 2: Select Status */}
+              {/* Step 2: Select Status & Name */}
               {selectedPart && (
                 <div style={{ marginBottom: 16 }}>
                   <span style={{ fontWeight: 600, fontSize: 15 }}>
-                    2. Select Status for {selectedPart}:
+                    2. Update Details for {selectedPart}:
                   </span>
+
+                  {/* Name Update Input */}
+                  <div className="mt-2 mb-3">
+                    <label className="form-label small fw-bold text-muted">New Part Name (Optional)</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder={`Enter new name for all selected ${selectedPart}s`}
+                      value={newPartName}
+                      onChange={(e) => setNewPartName(e.target.value)}
+                    />
+                    <div className="form-text small">Leave empty to keep existing names.</div>
+                  </div>
+
+                  <label className="form-label small fw-bold text-muted">Select Status</label>
                   <div
                     style={{
                       display: "flex",
                       flexWrap: "wrap",
                       gap: 10,
-                      marginTop: 10,
+                      marginTop: 5,
                       justifyContent: "center",
                     }}
                   >
@@ -1234,6 +1291,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                             }}
+                            className="fw-bold"
                             title={pc.pcNumber}
                           >
                             {pc.pcNumber}
@@ -1263,6 +1321,26 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
               >
                 Cancel
               </button>
+
+              <button
+                className="btn btn-danger me-auto"
+                onClick={async () => {
+                  if (!window.confirm(`Are you sure you want to delete ${selectedPCs.length} computers? This cannot be undone.`)) return;
+
+                  try {
+                    await api.post('/delete_computer/bulk', { ids: selectedPCs });
+                    toast.success(`Deleted ${selectedPCs.length} computers`);
+                    setShowQuickUpdate(false);
+                    setTimeout(() => window.location.reload(), 500);
+                  } catch (err) {
+                    console.error("Error deleting computers:", err);
+                    toast.error("Failed to delete computers");
+                  }
+                }}
+                disabled={selectedPCs.length === 0}
+              >
+                Delete Selected
+              </button>
               <button
                 className="btn"
                 style={{ backgroundColor: "#006633", color: "#fff", padding: "6px 16px" }}
@@ -1272,7 +1350,8 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
                     updated[pcId] = {
                       [selectedPart]: {
                         status: selectedStatus,
-                        type: "standard" // or "other" if selectedPart is dynamic
+                        type: "standard", // or "other" if selectedPart is dynamic
+                        ...(newPartName ? { name: newPartName } : {})
                       }
                     };
                   });
@@ -1331,7 +1410,7 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
               className="modal-header"
               style={{ backgroundColor: "#006633", color: "white", padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}
             >
-              <span>PC {selectedPC.pcNumber} – Update Status</span>
+              <span>{selectedPC.pcNumber}</span>
               <button
                 onClick={() => setSelectedPC(null)}
                 className="btn-close text-white"
@@ -1354,8 +1433,13 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
                   const Icon = partIcons[part];
                   const style = getStatusStyle(selectedPC.id);
                   const value = selectedPC.parts[part];
-                  const partLabel =
-                    value === 1 ? "Present" : value === 0 ? "Missing" : String(value);
+                  let partLabel = "";
+                  if (typeof value === 'object' && value !== null) {
+                    partLabel = value.name || "Present";
+                    if (value.serial) partLabel += ` (${value.serial})`;
+                  } else {
+                    partLabel = value === 1 ? "Present" : value === 0 ? "Missing" : String(value);
+                  }
 
                   return (
                     <div
@@ -1589,21 +1673,22 @@ export default function LabDetail({ lab, computers, back, addComputer }) {
         </div>
       )}
 
-
-
-
-
-
-
-
-
       {showAddComputer && (
         <AddComputerModal
           onClose={() => setShowAddComputer(false)}
           lab={lab}
+          addComputer={addComputer}
+          addComputers={addComputer} // Pass addComputer as addComputers for bulk updates if needed, or handle separately
         />
       )}
 
+      {showBulkAddModal && (
+        <AddBulkComputerModal
+          onClose={() => setShowBulkAddModal(false)}
+          lab={lab}
+          addComputers={addComputer} // Assuming addComputer handles array or single object, or we need to check LabDetail's addComputer prop
+        />
+      )}
     </div>
   );
 }

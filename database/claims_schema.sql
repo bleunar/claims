@@ -78,7 +78,9 @@ CREATE TABLE `computers` (
 CREATE TABLE `computer_parts` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `computer_id` varchar(255) NOT NULL,
-  `name` varchar(255) NOT NULL, -- e.g., "monitor", "keyboard", or custom name
+  `name` varchar(255) NOT NULL, -- User defined name (e.g. "Dell Monitor")
+  `serial_number` varchar(255) DEFAULT NULL,
+  `category` varchar(255) DEFAULT NULL, -- System defined type (e.g. "monitor", "keyboard")
   `type` ENUM('standard', 'custom') NOT NULL DEFAULT 'standard',
   `status` ENUM('operational', 'not_operational', 'damaged', 'missing') NOT NULL DEFAULT 'operational',
   `notes` text DEFAULT NULL,

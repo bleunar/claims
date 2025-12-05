@@ -5,6 +5,7 @@ Handles computer equipment management, status updates, and editing.
 from flask import Blueprint, request, jsonify
 import json
 import random
+import uuid
 from services.database import execute_query, get_db_cursor
 from services.logger import get_logger
 from utils.responses import success_response, error_response, database_error_response
@@ -44,7 +45,7 @@ def add_computer():
             other_parts = []
         
         # Generate unique ID for computer
-        computer_id = str(random.randint(10000000, 99999999))
+        computer_id = str(uuid.uuid4())
         
         # Convert specs and other_parts to JSON strings
         specs_json = json.dumps(specs) if isinstance(specs, dict) else specs
@@ -59,22 +60,27 @@ def add_computer():
         
         # Initialize computer status for each part (Unified table)
         if isinstance(specs, dict):
-            for part, value in specs.items():
+            for category, details in specs.items():
+                # details is expected to be { "name": "...", "serial": "..." }
+                part_name = details.get('name', '')
+                serial_number = details.get('serial', '')
+                
                 status_query = """
-                    INSERT INTO computer_parts (computer_id, name, type, status, notes) 
-                    VALUES (%s, %s, 'standard', 'operational', '')
+                    INSERT INTO computer_parts (computer_id, name, serial_number, category, type, status, notes) 
+                    VALUES (%s, %s, %s, %s, 'standard', 'operational', '')
                 """
-                execute_query(status_query, (computer_id, part))
+                execute_query(status_query, (computer_id, part_name, serial_number, category))
         
         # Insert other parts status for each item in the list
         for item in other_parts:
             if isinstance(item, dict) and 'name' in item:
                 part_name = item['name']
+                serial_number = item.get('serial', '')
                 other_query = """
-                    INSERT INTO computer_parts (computer_id, name, type, status, notes) 
-                    VALUES (%s, %s, 'custom', 'operational', '')
+                    INSERT INTO computer_parts (computer_id, name, serial_number, category, type, status, notes) 
+                    VALUES (%s, %s, %s, 'other', 'custom', 'operational', '')
                 """
-                execute_query(other_query, (computer_id, part_name))
+                execute_query(other_query, (computer_id, part_name, serial_number))
         
         logger.info(f'Computer added: {name} (ID: {computer_id}) in lab_id {lab_id}')
         
@@ -128,7 +134,7 @@ def computer_bulk():
                 continue
             
             # Generate unique ID
-            computer_id = str(random.randint(10000000, 99999999))
+            computer_id = str(uuid.uuid4())
             
             # Convert to JSON
             specs_json = json.dumps(specs) if isinstance(specs, dict) else specs
@@ -143,22 +149,31 @@ def computer_bulk():
             
             # Initialize statuses (Unified table)
             if isinstance(specs, dict):
-                for part in specs.keys():
+                for category, details in specs.items():
+                    # details might be string (old format) or dict (new format)
+                    if isinstance(details, dict):
+                        part_name = details.get('name', '')
+                        serial_number = details.get('serial', '')
+                    else:
+                        part_name = str(details)
+                        serial_number = ''
+
                     status_query = """
-                        INSERT INTO computer_parts (computer_id, name, type, status, notes) 
-                        VALUES (%s, %s, 'standard', 'operational', '')
+                        INSERT INTO computer_parts (computer_id, name, serial_number, category, type, status, notes) 
+                        VALUES (%s, %s, %s, %s, 'standard', 'operational', '')
                     """
-                    execute_query(status_query, (computer_id, part))
+                    execute_query(status_query, (computer_id, part_name, serial_number, category))
             
             # Insert other parts status for each item in the list
             for item in other_parts:
                 if isinstance(item, dict) and 'name' in item:
                     part_name = item['name']
+                    serial_number = item.get('serial', '')
                     other_query = """
-                        INSERT INTO computer_parts (computer_id, name, type, status, notes) 
-                        VALUES (%s, %s, 'custom', 'operational', '')
+                        INSERT INTO computer_parts (computer_id, name, serial_number, category, type, status, notes) 
+                        VALUES (%s, %s, %s, 'other', 'custom', 'operational', '')
                     """
-                    execute_query(other_query, (computer_id, part_name))
+                    execute_query(other_query, (computer_id, part_name, serial_number))
             
             inserted_computers.append({"pc_name": name, "id": computer_id})
         
@@ -258,17 +273,25 @@ def get_computer_statuses():
         
         statuses = []
         for row in results:
-            # id, computer_id, name, type, status, notes, updated_at
+            # id, computer_id, name, serial_number, category, type, status, notes, updated_at
+            # Note: Indexing depends on table structure. Assuming:
+            # id(0), computer_id(1), name(2), serial_number(3), category(4), type(5), status(6), notes(7), updated_at(8)
+            # But we used SELECT * which might be risky if columns change.
+            # Let's map by name if possible, or assume the order from schema.
+            # Schema order: id, computer_id, name, serial_number, category, type, status, notes, updated_at
+            
             status = {
                 "id": row[0],
-                "com_id": row[1], # Keep for frontend compatibility
+                "com_id": row[1],
                 "computer_id": row[1],
-                "part": row[2], # Keep for frontend compatibility
+                "part": row[4] if row[4] and row[4] != 'other' else row[2], # Use category as part key for standard, or name for custom/other
                 "name": row[2],
-                "type": row[3],
-                "status": 1 if row[4] == 'operational' else 2 if row[4] == 'not_operational' else 3 if row[4] == 'damaged' else 4, # Map ENUM to int for frontend compatibility if needed, or send string
-                "status_label": row[4],
-                "notes": row[5]
+                "serial_number": row[3],
+                "category": row[4],
+                "type": row[5],
+                "status": 1 if row[6] == 'operational' else 2 if row[6] == 'not_operational' else 3 if row[6] == 'damaged' else 4,
+                "status_label": row[6],
+                "notes": row[7]
             }
             statuses.append(status)
         
@@ -397,33 +420,44 @@ def update_computer_status_bulk():
                 for part, status_data in parts.items():
                     status_val = status_data.get("status")
                     notes = status_data.get("notes", "")
+                    new_name = status_data.get("name") # Get new name if provided
                     
                     if isinstance(status_val, int):
                         status_enum = status_map.get(status_val, 'operational')
                     else:
                         status_enum = status_val
                     
-                    # Check if part exists
-                    check_query = "SELECT id FROM computer_parts WHERE computer_id = %s AND name = %s"
-                    cursor.execute(check_query, (com_id, part))
+                    # Check if part exists by name or category
+                    check_query = "SELECT id FROM computer_parts WHERE computer_id = %s AND (name = %s OR category = %s)"
+                    cursor.execute(check_query, (com_id, part, part))
                     existing = cursor.fetchone()
                     
                     if existing:
-                        # Update existing
-                        query = """
-                            UPDATE computer_parts 
-                            SET status = %s, notes = %s 
-                            WHERE computer_id = %s AND name = %s
-                        """
-                        cursor.execute(query, (status_enum, notes, com_id, part))
+                        part_id = existing[0]
+                        # Update existing by ID
+                        if new_name:
+                            query = """
+                                UPDATE computer_parts 
+                                SET status = %s, notes = %s, name = %s
+                                WHERE id = %s
+                            """
+                            cursor.execute(query, (status_enum, notes, new_name, part_id))
+                        else:
+                            query = """
+                                UPDATE computer_parts 
+                                SET status = %s, notes = %s 
+                                WHERE id = %s
+                            """
+                            cursor.execute(query, (status_enum, notes, part_id))
                     else:
                         # Insert new
                         part_type = status_data.get("type", "standard")
+                        category = part if part_type == 'standard' else 'other'
                         query = """
-                            INSERT INTO computer_parts (computer_id, name, type, status, notes)
-                            VALUES (%s, %s, %s, %s, %s)
+                            INSERT INTO computer_parts (computer_id, name, category, type, status, notes)
+                            VALUES (%s, %s, %s, %s, %s, %s)
                         """
-                        cursor.execute(query, (com_id, part, part_type, status_enum, notes))
+                        cursor.execute(query, (com_id, part, category, part_type, status_enum, notes))
                     
                     # Auto-generate report if status is not operational
                     logger.info(f'Checking status for report generation: {status_enum} (Part: {part})')
@@ -523,3 +557,35 @@ def update_edit_data(pc_id):
     except Exception as e:
         logger.error(f'Update edit data error: {str(e)}')
         return jsonify({"error": str(e)}), 500
+
+
+@computers_bp.route('/delete_computer/bulk', methods=['POST'])
+@jwt_required_custom
+@role_required('admin', 'technician', 'itsd')
+def delete_computer_bulk():
+    """
+    Delete multiple computers by ID.
+    """
+    try:
+        data = request.json
+        computer_ids = data.get('ids', [])
+        
+        if not computer_ids:
+            return error_response("No computer IDs provided", 400)
+            
+        with get_db_cursor() as cursor:
+            # Create placeholders for IN clause
+            format_strings = ','.join(['%s'] * len(computer_ids))
+            
+            # Delete related records first (if cascading isn't fully set up, though schema says ON DELETE CASCADE)
+            # But relying on schema cascade is better.
+            
+            query = f"DELETE FROM computers WHERE id IN ({format_strings})"
+            cursor.execute(query, tuple(computer_ids))
+            
+        logger.info(f'Bulk deleted computers: {computer_ids}')
+        return success_response(f"Successfully deleted {len(computer_ids)} computers")
+        
+    except Exception as e:
+        logger.error(f"Error deleting computers bulk: {str(e)}")
+        return database_error_response(e, "Failed to delete computers")

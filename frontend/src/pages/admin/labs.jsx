@@ -63,7 +63,7 @@ export default function App() {
   }
 
   return (
-  <div style={{ padding: 40, background: "#f1f3f6", minHeight: "100vh" }}>
+    <div style={{ padding: 40, background: "#f1f3f6", minHeight: "100vh" }}>
       {!selectedLab && (
         <div style={{ textAlign: "center", marginBottom: 30 }}>
           <h2 style={{ marginBottom: 20, color: "#006633" }}>
@@ -94,5 +94,5 @@ export default function App() {
     </div>
   );
 
-  
+
 }

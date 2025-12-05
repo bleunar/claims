@@ -22,14 +22,14 @@ export default function AddComputerModal({ lab, addComputer, addComputers, onClo
 
   const [pcNumber, setPcNumber] = useState("");
   const [parts, setParts] = useState({
-    monitor: "",
-    systemUnit: "",
-    keyboard: "",
-    mouse: "",
-    headphone: "",
-    hdmi: "",
-    power: "",
-    wifi: "",
+    monitor: { name: "", serial: "" },
+    systemUnit: { name: "", serial: "" },
+    keyboard: { name: "", serial: "" },
+    mouse: { name: "", serial: "" },
+    headphone: { name: "", serial: "" },
+    hdmi: { name: "", serial: "" },
+    power: { name: "", serial: "" },
+    wifi: { name: "", serial: "" },
   });
   const [otherParts, setOtherParts] = useState([]);
   const [showOtherParts, setShowOtherParts] = useState(false);
@@ -48,7 +48,12 @@ export default function AddComputerModal({ lab, addComputer, addComputers, onClo
     wifi: <FaWifi className="text-success" />,
   };
 
-  const handleChange = (e) => setParts({ ...parts, [e.target.name]: e.target.value });
+  const handleChange = (part, field, value) => {
+    setParts({
+      ...parts,
+      [part]: { ...parts[part], [field]: value },
+    });
+  };
   const handleOtherPartChange = (index, field, value) => {
     const updated = [...otherParts];
     updated[index][field] = value;
@@ -217,13 +222,29 @@ export default function AddComputerModal({ lab, addComputer, addComputers, onClo
               {/* Parts Section */}
               <div className="p-3 mb-3 rounded-2" style={{ backgroundColor: "#e8f5e9" }}>
                 <h6 className="fw-bold text-success mb-3">Parts Serial Numbers</h6>
-                <div className="row g-3">
+                <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3">
                   {Object.keys(parts).map((p) => (
-                    <div key={p} className="col-md-3">
-                      <label className="form-label small text-capitalize">{p}</label>
-                      <div className="input-group input-group-sm">
-                        <span className="input-group-text">{partIcons[p]}</span>
-                        <input type="text" name={p} className="form-control" value={parts[p]} onChange={handleChange} required />
+                    <div key={p} className="col mb-3">
+                      <label className="form-label text-start text-capitalize w-100">
+                        <span className="fw-bold me-1">{partIcons[p]}</span> {p}
+                      </label>
+                      <div className="d-flex gap-2">
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          placeholder="Name/Model"
+                          value={parts[p].name}
+                          onChange={(e) => handleChange(p, "name", e.target.value)}
+                          required
+                        />
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          placeholder="Serial #"
+                          value={parts[p].serial}
+                          onChange={(e) => handleChange(p, "serial", e.target.value)}
+                          required
+                        />
                       </div>
                     </div>
                   ))}

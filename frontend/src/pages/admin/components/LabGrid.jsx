@@ -180,18 +180,16 @@ export default function LabGrid({ labs, selectLab }) {
               </div>
 
               {/* Lab Name & Location */}
-              <h5 style={{ color: "#006633", fontWeight: 600, marginBottom: 4 }}>
-                Computer Lab {lab.lab_name}
+              <h5 style={{ color: "#006633", fontWeight: 600, marginBottom: 2 }}>
+                {lab.lab_name}
               </h5>
               <span
                 style={{
-                  backgroundColor: "#FFCC00",
                   color: "#006633",
-                  padding: "3px 10px",
-                  borderRadius: 14,
                   fontSize: "0.82rem",
                   fontWeight: 500,
                 }}
+                className="text-nowrap"
               >
                 {lab.location}
               </span>

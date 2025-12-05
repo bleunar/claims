@@ -1,8 +1,3 @@
-/**
- * AdminOnboardingModal Component
- * Forces default admin to update credentials on first login
- * Cannot be closed until credentials are updated
- */
 import React, { useState } from 'react';
 import { Modal, Form, Button, Alert } from 'react-bootstrap';
 import { toast } from 'react-toastify';
@@ -107,23 +102,12 @@ const AdminOnboardingModal = ({ show, onComplete }) => {
       centered
       size="lg"
     >
-      <Modal.Header className="bg-warning text-dark">
-        <Modal.Title>
-          <i className="bi bi-exclamation-triangle-fill me-2"></i>
-          Welcome! Please Update Your Credentials
-        </Modal.Title>
-      </Modal.Header>
-
       <Modal.Body>
         <Alert variant="warning">
-          <Alert.Heading>⚠️ Default Admin Account Detected</Alert.Heading>
-          <p>
+          <Alert.Heading>Default Admin Account Detected</Alert.Heading>
+          <p className='mb-0'>
             You are currently using the default admin credentials. For security reasons,
             you must update your account information before proceeding.
-          </p>
-          <hr />
-          <p className="mb-0">
-            <strong>Important:</strong> Do not use the default values (admin, admin@example.com, changeme).
           </p>
         </Alert>
 
@@ -201,11 +185,14 @@ const AdminOnboardingModal = ({ show, onComplete }) => {
             </Form.Control.Feedback>
           </Form.Group>
 
+          <div className="text-muted text-center mt-5 mb-2">
+            After updating, you will be logged out and need to login with your new credentials.
+          </div>
+
           <div className="d-grid">
             <Button
               variant="success"
               type="submit"
-              size="lg"
               disabled={loading}
             >
               {loading ? (
@@ -222,11 +209,9 @@ const AdminOnboardingModal = ({ show, onComplete }) => {
       </Modal.Body>
 
       <Modal.Footer className="bg-light">
-        <small className="text-muted">
-          After updating, you will be logged out and need to login with your new credentials.
-        </small>
+
       </Modal.Footer>
-    </Modal>
+    </Modal >
   );
 };
 

@@ -171,10 +171,10 @@ export default function AdminDashboard() {
                 <YAxis allowDecimals={false} domain={[0, 'auto']} />
                 <Tooltip />
                 <Legend verticalAlign="top" align="center" />
-                <Bar dataKey="Operational" fill={COLORS.operational} barSize={20} />
-                <Bar dataKey="Not Operational" fill={COLORS.notOperational} barSize={20} />
-                <Bar dataKey="Missing" fill={COLORS.missing} barSize={20} />
-                <Bar dataKey="Damaged" fill={COLORS.damaged} barSize={20} />
+                <Bar dataKey="operational" fill={COLORS.operational} barSize={20} />
+                <Bar dataKey="notOperational" fill={COLORS.notOperational} barSize={20} />
+                <Bar dataKey="missing" fill={COLORS.missing} barSize={20} />
+                <Bar dataKey="damaged" fill={COLORS.damaged} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
                 <YAxis allowDecimals={false} tick={{ fill: "#333", fontSize: 14 }} />
                 <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "#f9f9f9", border: "1px solid #ccc", borderRadius: "8px", fontSize: 14 }} />
                 <Legend verticalAlign="top" align="center" wrapperStyle={{ fontSize: 14, marginBottom: 10 }} />
-                <Bar dataKey="Computers" fill={COLORS.operational} barSize={40} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="computers" fill={COLORS.operational} barSize={40} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -216,8 +216,8 @@ export default function AdminDashboard() {
                 <YAxis allowDecimals={false} />
                 <Tooltip contentStyle={{ backgroundColor: "#fff", borderRadius: "6px" }} />
                 <Legend verticalAlign="top" align="center" />
-                <Area type="monotone" dataKey="Damaged" stroke={COLORS.damaged} fill="url(#damagedGradient)" strokeWidth={2} activeDot={{ r: 6 }} />
-                <Area type="monotone" dataKey="Missing" stroke={COLORS.missing} fill="url(#missingGradient)" strokeWidth={2} activeDot={{ r: 6 }} />
+                <Area type="monotone" dataKey="damaged" stroke={COLORS.damaged} fill="url(#damagedGradient)" strokeWidth={2} activeDot={{ r: 6 }} />
+                <Area type="monotone" dataKey="missing" stroke={COLORS.missing} fill="url(#missingGradient)" strokeWidth={2} activeDot={{ r: 6 }} />
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>

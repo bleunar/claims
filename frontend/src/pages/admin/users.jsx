@@ -308,7 +308,6 @@ export default function Users() {
                                 onChange={handleInputChange}
                             >
                                 <option value="technician">Technician</option>
-                                <option value="admin">Admin</option>
                                 <option value="dean">Dean</option>
                                 <option value="itsd">ITSD</option>
                             </Form.Select>
@@ -376,12 +375,18 @@ export default function Users() {
                                 name="role"
                                 value={formData.role}
                                 onChange={handleInputChange}
+                                disabled={selectedUser?.id === currentUser?.id}
                             >
                                 <option value="technician">Technician</option>
-                                <option value="admin">Admin</option>
+
                                 <option value="dean">Dean</option>
                                 <option value="itsd">ITSD</option>
                             </Form.Select>
+                            {selectedUser?.id === currentUser?.id && (
+                                <Form.Text className="text-muted">
+                                    You cannot change your own role.
+                                </Form.Text>
+                            )}
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>Year/Section</Form.Label>
